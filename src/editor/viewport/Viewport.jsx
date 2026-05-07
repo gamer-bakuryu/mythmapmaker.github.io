@@ -11,12 +11,10 @@ import {
 import * as THREE from 'three'
 import { useMemo, useRef } from 'react'
 
-function Terrain(){
-
+function Terrain() {
   const meshRef = useRef()
 
-  const geometry = useMemo(()=>{
-
+  const geometry = useMemo(() => {
     const geo = new THREE.PlaneGeometry(
       3140,
       2160,
@@ -26,8 +24,7 @@ function Terrain(){
 
     const pos = geo.attributes.position
 
-    for(let i=0;i<pos.count;i++){
-
+    for (let i = 0; i < pos.count; i++) {
       const x = pos.getX(i)
       const y = pos.getY(i)
 
@@ -37,20 +34,19 @@ function Terrain(){
         Math.sin(x * 0.03) * 8 +
         Math.random() * 2
 
-      pos.setZ(i,height)
+      pos.setZ(i, height)
     }
 
     geo.computeVertexNormals()
 
     return geo
-
-  },[])
+  }, [])
 
   return (
     <mesh
       ref={meshRef}
       geometry={geometry}
-      rotation-x={-Math.PI/2}
+      rotation-x={-Math.PI / 2}
       receiveShadow
     >
       <meshStandardMaterial
@@ -62,10 +58,10 @@ function Terrain(){
   )
 }
 
-function Water(){
+function Water() {
   return (
-    <mesh rotation-x={-Math.PI/2} position-y={2}>
-      <planeGeometry args={[1500,1200]} />
+    <mesh rotation-x={-Math.PI / 2} position-y={2}>
+      <planeGeometry args={[1500, 1200]} />
       <meshPhysicalMaterial
         color="#2b6aff"
         transparent
@@ -78,78 +74,69 @@ function Water(){
   )
 }
 
-function Forest(){
-
-  const trees = useMemo(()=>{
-
+function Forest() {
+  const trees = useMemo(() => {
     const arr = []
 
-    for(let i=0;i<800;i++){
+    for (let i = 0; i < 800; i++) {
       arr.push({
-        x:Math.random()*2600-1300,
-        z:Math.random()*1800-900,
-        s:Math.random()*3+2
+        x: Math.random() * 2600 - 1300,
+        z: Math.random() * 1800 - 900,
+        s: Math.random() * 3 + 2
       })
     }
 
     return arr
+  }, [])
 
-  },[])
-
-  return trees.map((t,i)=>(
-    <group key={i} position={[t.x,8,t.z]}>
-
+  return trees.map((t, i) => (
+    <group key={i} position={[t.x, 8, t.z]}>
       <mesh castShadow>
-        <cylinderGeometry args={[0.5,0.8,8]} />
+        <cylinderGeometry args={[0.5, 0.8, 8]} />
         <meshStandardMaterial color="#4b3228" />
       </mesh>
 
       <mesh position-y={7} castShadow>
-        <coneGeometry args={[t.s,10,8]} />
+        <coneGeometry args={[t.s, 10, 8]} />
         <meshStandardMaterial color="#234d20" />
       </mesh>
-
     </group>
   ))
 }
 
-function Cities(){
-
+function Cities() {
   const cities = [
-    [-400,10,-200],
-    [300,10,200],
-    [700,10,-500]
+    [-400, 10, -200],
+    [300, 10, 200],
+    [700, 10, -500]
   ]
 
-  return cities.map((c,i)=>(
+  return cities.map((c, i) => (
     <group key={i} position={c}>
-
       <mesh castShadow>
-        <boxGeometry args={[30,20,30]} />
+        <boxGeometry args={[30, 20, 30]} />
         <meshStandardMaterial color="#8a8a8a" />
       </mesh>
 
       <Html distanceFactor={20}>
         <div className="bg-black/70 text-white px-2 py-1 rounded text-xs border border-cyan-400">
-          Cidade {i+1}
+          Cidade {i + 1}
         </div>
       </Html>
-
     </group>
   ))
 }
 
-function Roads(){
-
+function Roads() {
   const points = [
-    new THREE.Vector3(-400,4,-200),
-    new THREE.Vector3(0,6,0),
-    new THREE.Vector3(300,4,200)
+    new THREE.Vector3(-400, 4, -200),
+    new THREE.Vector3(0, 6, 0),
+    new THREE.Vector3(300, 4, 200)
   ]
 
   const curve = new THREE.CatmullRomCurve3(points)
 
-  const geometry = new THREE.TubeGeometry(curve,64,4,8,false)
+  const geometry = new THREE.TubeGeometry(curve, 64, 4, 8, false)
 
   return (
     <mesh geometry={geometry} castShadow receiveShadow>
@@ -158,12 +145,10 @@ function Roads(){
   )
 }
 
-function DynamicSun(){
-
+function DynamicSun() {
   const lightRef = useRef()
 
-  useFrame(({clock})=>{
-
+  useFrame(({ clock }) => {
     const t = clock.getElapsedTime() * 0.05
 
     lightRef.current.position.x = Math.sin(t) * 400
@@ -175,36 +160,34 @@ function DynamicSun(){
       ref={lightRef}
       intensity={2}
       castShadow
-      position={[200,300,200]}
+      position={[200, 300, 200]}
       shadow-mapSize-width={4096}
       shadow-mapSize-height={4096}
     />
   )
 }
 
-export default function Viewport(){
-
+export default function Viewport() {
   return (
     <Canvas
       shadows
       gl={{
-        antialias:true,
-        powerPreference:'high-performance'
+        antialias: true,
+        powerPreference: 'high-performance'
       }}
     >
-
       <PerspectiveCamera
         makeDefault
-        position={[0,180,220]}
+        position={[0, 180, 220]}
         fov={55}
       />
 
       <Sky
         distance={450000}
-        sunPosition={[100,40,100]}
+        sunPosition={[100, 40, 100]}
       />
 
-      <fog attach="fog" args={['#87a7c7',500,5000]} />
+      <fog attach="fog" args={['#87a7c7', 500, 5000]} />
 
       <ambientLight intensity={0.35} />
 
@@ -212,7 +195,7 @@ export default function Viewport(){
 
       <Environment preset="forest" />
 
-      <gridHelper args={[5000,200,'#00ffff','#333333']} />
+      <gridHelper args={[5000, 200, '#00ffff', '#333333']} />
 
       <Terrain />
 
@@ -225,7 +208,7 @@ export default function Viewport(){
       <Roads />
 
       <ContactShadows
-        position={[0,0,0]}
+        position={[0, 0, 0]}
         opacity={0.4}
         scale={500}
         blur={2}
@@ -236,47 +219,8 @@ export default function Viewport(){
         dampingFactor={0.05}
         minDistance={40}
         maxDistance={2000}
-        maxPolarAngle={Math.PI/2.1}
+        maxPolarAngle={Math.PI / 2.1}
       />
-
     </Canvas>
   )
 }
-```jsx
-import { Canvas } from '@react-three/fiber'
-import {
-  OrbitControls,
-  TransformControls,
-  Grid,
-  PerspectiveCamera
-} from '@react-three/drei'
-
-import { Suspense } from 'react'
-
-export default function Viewport(){
-
-  return (
-    <Canvas shadows>
-
-      <PerspectiveCamera
-        makeDefault
-        position={[0, 150, 150]}
-      />
-
-      <ambientLight intensity={0.3} />
-
-      <directionalLight
-        position={[100,200,100]}
-        intensity={2}
-        castShadow
-      />
-
-      <Grid
-        args={[10000,10000]}
-        sectionColor="#00ffff"
-      />
-
-      <mesh rotation-x={-Math.PI/2} receiveShadow>
-        <planeGeometry args={[3140,2160,256,256]} />
-        <meshStandardMaterial color="#356b3f" />
-      </mesh>
