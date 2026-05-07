@@ -1,0 +1,32 @@
+rpg-map-editor/
+├── index.html
+├── style.css
+├── app.js
+│
+├── core/
+│   ├── canvas.js
+│   ├── camera.js
+│   └── input.js
+│
+├── world/
+│   ├── terrain.js
+│   ├── biomes.js
+│   ├── rivers.js
+│   └── roads.js
+│
+├── systems/
+│   ├── brush.js
+│   ├── layers.js
+│   ├── assets.js
+│   ├── save.js
+│   └── history.js
+│
+├── assets/
+│   ├── trees/
+│   ├── mountains/
+│   └── cities/
+│
+└── ui/
+    ├── toolbar.js
+    ├── inspector.js
+    └── minimap.js
