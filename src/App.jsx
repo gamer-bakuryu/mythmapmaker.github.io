@@ -9,10 +9,11 @@ export default function App() {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
+        fontSize: '32px',
         fontFamily: 'sans-serif'
       }}
     >
-      RPG Map Builder
+      RPG Map Builder OK
     </div>
   )
 }
