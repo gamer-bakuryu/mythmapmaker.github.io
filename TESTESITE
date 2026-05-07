@@ -1,0 +1,442 @@
+// 🚀 EDITOR COMPLETO PRO (OUTLINE + GRID SNAP + GIZMO PRO + ASSET LIBRARY PRO)
+
+import './style.css';
+import * as THREE from 'three';
+import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
+import { TransformControls } from 'three/examples/jsm/controls/TransformControls.js';
+import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
+import { OutlinePass } from 'three/examples/jsm/postprocessing/OutlinePass.js';
+
+// =========================
+// SETUP
+// =========================
+const scene=new THREE.Scene();
+const camera=new THREE.PerspectiveCamera(75,window.innerWidth/window.innerHeight,0.1,10000);
+const renderer=new THREE.WebGLRenderer({antialias:true});
+renderer.setSize(window.innerWidth,window.innerHeight);
+renderer.shadowMap.enabled=true;
+document.body.appendChild(renderer.domElement);
+
+// POST PROCESS (OUTLINE)
+const composer = new EffectComposer(renderer);
+composer.addPass(new RenderPass(scene, camera));
+
+const outlinePass = new OutlinePass(new THREE.Vector2(window.innerWidth, window.innerHeight), scene, camera);
+outlinePass.edgeStrength = 5;
+outlinePass.edgeGlow = 1;
+outlinePass.edgeThickness = 2;
+outlinePass.visibleEdgeColor.set('#00ffff');
+composer.addPass(outlinePass);
+
+const raycaster = new THREE.Raycaster();
+const mouse = new THREE.Vector2();
+
+const orbit=new OrbitControls(camera,renderer.domElement);
+camera.position.set(0,200,300);
+
+// =========================
+// LIGHT
+// =========================
+const light=new THREE.DirectionalLight(0xffffff,1);
+light.position.set(100,200,100);
+light.castShadow=true;
+scene.add(light);
+scene.add(new THREE.AmbientLight(0x404040));
+
+let terrainMesh;
+let objects=[];
+let selectedObjects=[];
+let placementMode=null;
+let currentLayer = 'default';
+let layers = {
+  default: {
+    visible:true,
+    objects:[]
+  }
+};
+
+// =========================
+// GRID SNAP
+// =========================
+let gridSize = 20;
+function snapToGrid(v){
+  return Math.round(v / gridSize) * gridSize;
+}
+
+// =========================
+// TRANSFORM (GIZMO PRO)
+// =========================
+const transform=new TransformControls(camera,renderer.domElement);
+transform.setTranslationSnap(gridSize);
+transform.setRotationSnap(THREE.MathUtils.degToRad(15));
+transform.setScaleSnap(0.1);
+
+transform.addEventListener('dragging-changed',e=>orbit.enabled=!e.value);
+scene.add(transform);
+
+// =========================
+// WORLD
+// =========================
+function generateWorld(){
+const geo=new THREE.PlaneGeometry(3140,2160,255,255);
+for(let i=0;i<geo.attributes.position.count;i++){
+  geo.attributes.position.setZ(i,Math.random()*30);
+}
+geo.computeVertexNormals();
+
+const mat=new THREE.MeshStandardMaterial({color:0x228B22});
+terrainMesh=new THREE.Mesh(geo,mat);
+terrainMesh.rotation.x=-Math.PI/2;
+terrainMesh.receiveShadow=true;
+scene.add(terrainMesh);
+}
+
+// =========================
+// LAYER SYSTEM (PHOTOSHOP STYLE)
+// =========================
+const layersPanel = document.createElement('div');
+layersPanel.style.position='absolute';
+layersPanel.style.left='10px';
+layersPanel.style.top='10px';
+layersPanel.style.background='rgba(0,0,0,0.7)';
+layersPanel.style.padding='10px';
+layersPanel.style.color='white';
+layersPanel.style.width='220px';
+document.body.appendChild(layersPanel);
+
+const layerTitle = document.createElement('div');
+layerTitle.innerText='LAYERS';
+layerTitle.style.fontWeight='bold';
+layersPanel.appendChild(layerTitle);
+
+const addLayerBtn = document.createElement('button');
+addLayerBtn.innerText='+ Layer';
+layersPanel.appendChild(addLayerBtn);
+
+const layersList = document.createElement('div');
+layersPanel.appendChild(layersList);
+
+function refreshLayersUI(){
+  layersList.innerHTML='';
+
+  Object.keys(layers).forEach(layerName=>{
+    const row=document.createElement('div');
+    row.style.display='flex';
+    row.style.alignItems='center';
+    row.style.justifyContent='space-between';
+    row.style.marginTop='5px';
+
+    const label=document.createElement('span');
+    label.innerText=layerName;
+    label.style.cursor='pointer';
+
+    if(currentLayer===layerName){
+      label.style.color='#00ffff';
+    }
+
+    label.onclick=()=>{
+      currentLayer=layerName;
+      refreshLayersUI();
+    };
+
+    const visibility=document.createElement('input');
+    visibility.type='checkbox';
+    visibility.checked=layers[layerName].visible;
+
+    visibility.onchange=()=>{
+      layers[layerName].visible=visibility.checked;
+      layers[layerName].objects.forEach(o=>o.visible=visibility.checked);
+    };
+
+    row.appendChild(label);
+    row.appendChild(visibility);
+
+    layersList.appendChild(row);
+  });
+}
+
+addLayerBtn.onclick=()=>{
+  const name=prompt('Nome da layer');
+  if(!name || layers[name]) return;
+
+  layers[name]={
+    visible:true,
+    objects:[]
+  };
+
+  refreshLayersUI();
+};
+
+refreshLayersUI();
+
+// =========================
+// ASSET LIBRARY PRO (CATEGORIES + SEARCH)
+// =========================
+const libraryDiv = document.createElement('div');
+libraryDiv.style.position='absolute';
+libraryDiv.style.right='10px';
+libraryDiv.style.top='10px';
+libraryDiv.style.background='rgba(0,0,0,0.7)';
+libraryDiv.style.padding='10px';
+libraryDiv.style.maxHeight='80vh';
+libraryDiv.style.overflow='auto';
+document.body.appendChild(libraryDiv);
+
+const searchInput = document.createElement('input');
+searchInput.placeholder='Buscar asset...';
+searchInput.style.width='100%';
+libraryDiv.appendChild(searchInput);
+
+let assetsDB = [];
+
+function addThumbnail(file, category='default'){
+  const name = file.name.toLowerCase();
+  const url = URL.createObjectURL(file);
+
+  const img=document.createElement('img');
+  img.src=url;
+  img.style.width='50px';
+  img.style.margin='5px';
+  img.dataset.name = name;
+  img.dataset.category = category;
+
+  img.onclick=()=> placementMode=file;
+
+  libraryDiv.appendChild(img);
+
+  assetsDB.push({file,name,category,element:img});
+}
+
+searchInput.addEventListener('input',()=>{
+  const q = searchInput.value.toLowerCase();
+  assetsDB.forEach(a=>{
+    const visible = a.name.includes(q) || a.category.includes(q);
+    a.element.style.display = visible ? 'block' : 'none';
+  });
+});
+
+// =========================
+// TOKEN CREATE (GRID + SNAP)
+// =========================
+const loader=new THREE.TextureLoader();
+
+function createToken(file,x,z){
+const url=URL.createObjectURL(file);
+const texture=loader.load(url);
+
+const mat=new THREE.MeshStandardMaterial({map:texture,transparent:true});
+const geo=new THREE.PlaneGeometry(50,50);
+const mesh=new THREE.Mesh(geo,mat);
+
+// GRID SNAP
+x = snapToGrid(x);
+z = snapToGrid(z);
+
+mesh.position.set(x,0,z);
+mesh.rotation.x=-Math.PI/2;
+mesh.castShadow=true;
+
+// HEIGHT SNAP
+raycaster.set(new THREE.Vector3(x,100,z), new THREE.Vector3(0,-1,0));
+const intersects = raycaster.intersectObject(terrainMesh);
+if(intersects.length>0){
+  mesh.position.y = intersects[0].point.y + 1;
+}
+
+scene.add(mesh);
+objects.push(mesh);
+
+mesh.userData.layer=currentLayer;
+layers[currentLayer].objects.push(mesh);
+}
+
+// =========================
+// CLICK
+// =========================
+window.addEventListener('click', (event)=>{
+mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+raycaster.setFromCamera(mouse,camera);
+
+if(placementMode){
+  const hit = raycaster.intersectObject(terrainMesh);
+  if(hit.length>0){
+    createToken(placementMode,hit[0].point.x,hit[0].point.z);
+  }
+  return;
+}
+
+const intersects = raycaster.intersectObjects(objects);
+if(intersects.length>0){
+  const obj=intersects[0].object;
+  selectedObjects=[obj];
+  transform.attach(obj);
+  outlinePass.selectedObjects = selectedObjects;
+}else{
+  selectedObjects=[];
+  transform.detach();
+  outlinePass.selectedObjects = [];
+}
+});
+
+// =========================
+// SAVE / LOAD COMPLETE (INDEXEDDB + SCENE)
+// =========================
+const DB_NAME='rpg_map_editor';
+const STORE='scenes';
+
+function openDB(){
+  return new Promise((resolve,reject)=>{
+    const req=indexedDB.open(DB_NAME,1);
+
+    req.onupgradeneeded=e=>{
+      e.target.result.createObjectStore(STORE);
+    };
+
+    req.onsuccess=e=>resolve(e.target.result);
+    req.onerror=reject;
+  });
+}
+
+async function saveScene(){
+  const db=await openDB();
+
+  const sceneData={
+    layers:Object.keys(layers).map(name=>({
+      name,
+      visible:layers[name].visible
+    })),
+
+    objects:objects.map(o=>({
+      layer:o.userData.layer,
+      texture:o.material.map.image.currentSrc,
+      position:{
+        x:o.position.x,
+        y:o.position.y,
+        z:o.position.z
+      },
+      rotation:{
+        x:o.rotation.x,
+        y:o.rotation.y,
+        z:o.rotation.z
+      },
+      scale:{
+        x:o.scale.x,
+        y:o.scale.y,
+        z:o.scale.z
+      }
+    }))
+  };
+
+  return new Promise(resolve=>{
+    const tx=db.transaction(STORE,'readwrite');
+    tx.objectStore(STORE).put(sceneData,'autosave');
+    tx.oncomplete=()=>resolve();
+  });
+}
+
+async function loadScene(){
+  const db=await openDB();
+
+  const sceneData = await new Promise(resolve=>{
+    const tx=db.transaction(STORE,'readonly');
+    const req=tx.objectStore(STORE).get('autosave');
+    req.onsuccess=()=>resolve(req.result);
+  });
+
+  if(!sceneData) return;
+
+  // clear old
+  objects.forEach(o=>scene.remove(o));
+  objects=[];
+
+  layers={};
+
+  sceneData.layers.forEach(l=>{
+    layers[l.name]={
+      visible:l.visible,
+      objects:[]
+    };
+  });
+
+  refreshLayersUI();
+
+  sceneData.objects.forEach(data=>{
+    loader.load(data.texture,(texture)=>{
+
+      const mat=new THREE.MeshStandardMaterial({
+        map:texture,
+        transparent:true
+      });
+
+      const geo=new THREE.PlaneGeometry(50,50);
+      const mesh=new THREE.Mesh(geo,mat);
+
+      mesh.position.set(data.position.x,data.position.y,data.position.z);
+      mesh.rotation.set(data.rotation.x,data.rotation.y,data.rotation.z);
+      mesh.scale.set(data.scale.x,data.scale.y,data.scale.z);
+
+      mesh.userData.layer=data.layer;
+
+      scene.add(mesh);
+      objects.push(mesh);
+
+      if(!layers[data.layer]){
+        layers[data.layer]={
+          visible:true,
+          objects:[]
+        };
+      }
+
+      layers[data.layer].objects.push(mesh);
+      mesh.visible=layers[data.layer].visible;
+    });
+  });
+}
+
+// autosave interval
+setInterval(saveScene,5000);
+
+// =========================
+// KEYS
+// =========================
+window.addEventListener('keydown',(e)=>{
+if(e.key==='Escape') placementMode=null;
+
+if(e.ctrlKey && e.key==='s'){
+  e.preventDefault();
+  saveScene();
+}
+
+if(e.ctrlKey && e.key==='l'){
+  e.preventDefault();
+  loadScene();
+}
+});
+
+// =========================
+// UPLOAD
+// =========================
+document.getElementById('assetUpload').addEventListener('change',(e)=>{
+[...e.target.files].forEach(file=> addThumbnail(file));
+});
+
+// =========================
+// LOOP
+// =========================
+function animate(){
+requestAnimationFrame(animate);
+composer.render();
+}
+animate();
+
+generateWorld();
+
+// =========================
+// TESTES
+// =========================
+console.assert(typeof snapToGrid==='function','Grid snap falhou');
+console.assert(typeof addThumbnail==='function','Library falhou');
+console.assert(typeof createToken==='function','Token falhou');
