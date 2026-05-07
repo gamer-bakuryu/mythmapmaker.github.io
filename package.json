@@ -1,6 +1,3 @@
-npm install
-npm run dev
-
 {
   "name": "rpg-map-builder",
   "private": true,
