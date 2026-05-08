@@ -1,0 +1,13 @@
+.canvas-area {
+  position: relative;
+  overflow: hidden;
+}
+
+#map-canvas {
+  image-rendering: pixelated;
+  cursor: grab;
+}
+
+#map-canvas:active {
+  cursor: grabbing;
+}
