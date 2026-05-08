@@ -7,15 +7,21 @@ import StatusBar from "./components/StatusBar";
 function App() {
   return (
     <div className="app-container">
+
       <Toolbar />
 
       <div className="main-layout">
+
         <Sidebar />
+
         <CanvasArea />
+
         <LayersPanel />
+
       </div>
 
       <StatusBar />
+
     </div>
   );
 }
