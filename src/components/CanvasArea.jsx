@@ -3,7 +3,13 @@ import { useEffect, useRef } from "react";
 import { CanvasSystem } from "../systems/canvasSystem";
 import { GridSystem } from "../systems/gridSystem";
 
-function CanvasArea() {
+function CanvasArea({
+  layers,
+  activeLayerId,
+  addObjectToLayer,
+  selectedObjects,
+  setSelectedObjects,
+}) {
 
   const canvasRef = useRef(null);
 
@@ -12,8 +18,6 @@ function CanvasArea() {
     y: 0,
     worldX: 0,
     worldY: 0,
-    snappedX: 0,
-    snappedY: 0,
   });
 
   useEffect(() => {
@@ -22,10 +26,6 @@ function CanvasArea() {
 
     if (!canvas) return;
 
-    // =========================
-    // SYSTEMS
-    // =========================
-
     const canvasSystem =
       new CanvasSystem(canvas);
 
@@ -33,16 +33,10 @@ function CanvasArea() {
       new GridSystem(50);
 
     // =========================
-    // MOUSE MOVE
+    // CLICK ADD OBJECT
     // =========================
 
-    const handleMouseMove = (e) => {
-
-      mouseRef.current.x =
-        e.clientX;
-
-      mouseRef.current.y =
-        e.clientY;
+    const handleDoubleClick = (e) => {
 
       const world =
         canvasSystem.screenToWorld(
@@ -50,110 +44,79 @@ function CanvasArea() {
           e.clientY
         );
 
-      mouseRef.current.worldX =
-        world.x;
+      addObjectToLayer(
+        activeLayerId,
+        {
+          id: crypto.randomUUID(),
 
-      mouseRef.current.worldY =
-        world.y;
+          x: world.x,
 
-      // =========================
-      // SNAP
-      // =========================
+          y: world.y,
 
-      const snapped =
-        gridSystem.snapPosition(
-          world.x,
-          world.y
-        );
+          width: 50,
 
-      mouseRef.current.snappedX =
-        snapped.x;
+          height: 50,
 
-      mouseRef.current.snappedY =
-        snapped.y;
-
-      // =========================
-      // PAN
-      // =========================
-
-      if (canvasSystem.isPanning) {
-
-        canvasSystem.camera.x +=
-          e.movementX;
-
-        canvasSystem.camera.y +=
-          e.movementY;
-      }
-
-      canvasSystem.requestRedraw();
-    };
-
-    // =========================
-    // PAN START
-    // =========================
-
-    const handleMouseDown = (e) => {
-
-      if (
-        e.button === 1 ||
-        e.button === 2
-      ) {
-
-        canvasSystem.isPanning = true;
-      }
-    };
-
-    // =========================
-    // PAN END
-    // =========================
-
-    const handleMouseUp = () => {
-
-      canvasSystem.isPanning = false;
-
-      canvasSystem.requestRedraw();
-    };
-
-    // =========================
-    // ZOOM
-    // =========================
-
-    const handleWheel = (e) => {
-
-      e.preventDefault();
-
-      canvasSystem.zoomAt(
-        e.clientX,
-        e.clientY,
-        e.deltaY
+          color: "#3a86ff",
+        }
       );
 
       canvasSystem.requestRedraw();
     };
 
     // =========================
-    // KEYBOARD
+    // MULTI SELECT
     // =========================
 
-    const handleKeyDown = (e) => {
+    const handleClick = (e) => {
 
-      // G = Toggle Grid
+      const world =
+        canvasSystem.screenToWorld(
+          e.clientX,
+          e.clientY
+        );
 
-      if (e.key.toLowerCase() === "g") {
+      const clicked = [];
 
-        gridSystem.toggleGrid();
+      layers.forEach((layer) => {
 
-        canvasSystem.requestRedraw();
+        if (
+          !layer.visible ||
+          layer.locked
+        ) {
+          return;
+        }
+
+        layer.objects.forEach((obj) => {
+
+          if (
+            world.x >= obj.x &&
+            world.x <=
+              obj.x + obj.width &&
+            world.y >= obj.y &&
+            world.y <=
+              obj.y + obj.height
+          ) {
+            clicked.push(obj.id);
+          }
+        });
+      });
+
+      if (e.shiftKey) {
+
+        setSelectedObjects((prev) => [
+          ...new Set([
+            ...prev,
+            ...clicked,
+          ]),
+        ]);
+
+      } else {
+
+        setSelectedObjects(clicked);
       }
 
-      // S = Toggle Snap
-
-      if (e.key.toLowerCase() === "s") {
-
-        gridSystem.toggleSnap();
-
-        canvasSystem.requestRedraw();
-      }
+      canvasSystem.requestRedraw();
     };
 
     // =========================
@@ -161,10 +124,6 @@ function CanvasArea() {
     // =========================
 
     const renderScene = (ctx) => {
-
-      // =========================
-      // BACKGROUND
-      // =========================
 
       ctx.fillStyle = "#233142";
 
@@ -175,10 +134,6 @@ function CanvasArea() {
         canvas.height
       );
 
-      // =========================
-      // GRID
-      // =========================
-
       gridSystem.draw(
         ctx,
         canvas.width,
@@ -187,168 +142,96 @@ function CanvasArea() {
       );
 
       // =========================
-      // SNAP PREVIEW
+      // DRAW OBJECTS
       // =========================
 
-      const snappedScreen =
-        canvasSystem.worldToScreen(
-          mouseRef.current.snappedX,
-          mouseRef.current.snappedY
-        );
+      layers.forEach((layer) => {
 
-      ctx.fillStyle =
-        "rgba(58,134,255,0.8)";
+        if (!layer.visible) return;
 
-      ctx.beginPath();
+        layer.objects.forEach((obj) => {
 
-      ctx.arc(
-        snappedScreen.x,
-        snappedScreen.y,
-        5,
-        0,
-        Math.PI * 2
-      );
+          const screen =
+            canvasSystem.worldToScreen(
+              obj.x,
+              obj.y
+            );
 
-      ctx.fill();
+          ctx.fillStyle = obj.color;
 
-      // =========================
-      // HUD
-      // =========================
+          ctx.fillRect(
+            screen.x,
+            screen.y,
+            obj.width *
+              canvasSystem.camera.zoom,
+            obj.height *
+              canvasSystem.camera.zoom
+          );
 
-      ctx.fillStyle = "white";
+          // SELECTED
 
-      ctx.font =
-        "14px Garamond";
+          if (
+            selectedObjects.includes(
+              obj.id
+            )
+          ) {
 
-      ctx.fillText(
-        `Mouse: ${Math.floor(
-          mouseRef.current.worldX
-        )}, ${Math.floor(
-          mouseRef.current.worldY
-        )}`,
-        20,
-        30
-      );
+            ctx.strokeStyle =
+              "#00ff88";
 
-      ctx.fillText(
-        `Snap: ${Math.floor(
-          mouseRef.current.snappedX
-        )}, ${Math.floor(
-          mouseRef.current.snappedY
-        )}`,
-        20,
-        50
-      );
+            ctx.lineWidth = 3;
 
-      ctx.fillText(
-        `Zoom: ${canvasSystem.camera.zoom.toFixed(
-          2
-        )}`,
-        20,
-        70
-      );
-
-      ctx.fillText(
-        `Grid: ${
-          gridSystem.enabled
-            ? "ON"
-            : "OFF"
-        }`,
-        20,
-        90
-      );
-
-      ctx.fillText(
-        `Snap: ${
-          gridSystem.snapEnabled
-            ? "ON"
-            : "OFF"
-        }`,
-        20,
-        110
-      );
+            ctx.strokeRect(
+              screen.x,
+              screen.y,
+              obj.width *
+                canvasSystem.camera
+                  .zoom,
+              obj.height *
+                canvasSystem.camera
+                  .zoom
+            );
+          }
+        });
+      });
     };
-
-    // =========================
-    // START LOOP
-    // =========================
 
     canvasSystem.startRenderLoop(
       renderScene
     );
 
-    // =========================
-    // EVENTS
-    // =========================
-
-    window.addEventListener(
-      "mousemove",
-      handleMouseMove
-    );
-
-    window.addEventListener(
-      "mousedown",
-      handleMouseDown
-    );
-
-    window.addEventListener(
-      "mouseup",
-      handleMouseUp
-    );
-
-    window.addEventListener(
-      "keydown",
-      handleKeyDown
+    canvas.addEventListener(
+      "dblclick",
+      handleDoubleClick
     );
 
     canvas.addEventListener(
-      "wheel",
-      handleWheel,
-      {
-        passive: false,
-      }
+      "click",
+      handleClick
     );
-
-    canvas.addEventListener(
-      "contextmenu",
-      (e) => e.preventDefault()
-    );
-
-    // =========================
-    // CLEANUP
-    // =========================
 
     return () => {
 
       canvasSystem.stopRenderLoop();
 
-      window.removeEventListener(
-        "mousemove",
-        handleMouseMove
-      );
-
-      window.removeEventListener(
-        "mousedown",
-        handleMouseDown
-      );
-
-      window.removeEventListener(
-        "mouseup",
-        handleMouseUp
-      );
-
-      window.removeEventListener(
-        "keydown",
-        handleKeyDown
+      canvas.removeEventListener(
+        "dblclick",
+        handleDoubleClick
       );
 
       canvas.removeEventListener(
-        "wheel",
-        handleWheel
+        "click",
+        handleClick
       );
     };
 
-  }, []);
+  }, [
+    layers,
+    activeLayerId,
+    addObjectToLayer,
+    selectedObjects,
+    setSelectedObjects,
+  ]);
 
   return (
     <main className="canvas-area">
