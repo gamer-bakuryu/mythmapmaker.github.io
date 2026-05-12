@@ -34,3 +34,116 @@
 .sidebar button:hover {
   background: var(--green-hover);
 }
+
+/* =========================
+   LAYERS
+========================= */
+
+.layers-panel {
+  display: flex;
+
+  flex-direction: column;
+
+  gap: var(--spacing-md);
+}
+
+.layers-header {
+  display: flex;
+
+  align-items: center;
+
+  justify-content: space-between;
+}
+
+.layer-add-btn {
+  width: 32px;
+  height: 32px;
+
+  border-radius: 6px;
+
+  background: var(--green-primary);
+
+  color: white;
+
+  font-size: 20px;
+}
+
+.layer-add-btn:hover {
+  background: var(--green-hover);
+}
+
+.layers-list {
+  display: flex;
+
+  flex-direction: column;
+
+  gap: 10px;
+}
+
+.layer-item {
+  background: #243447;
+
+  border: 1px solid transparent;
+
+  border-radius: 8px;
+
+  padding: 10px;
+
+  cursor: pointer;
+
+  transition: 0.2s;
+}
+
+.layer-item:hover {
+  border-color: var(--blue-primary);
+}
+
+.layer-item.active {
+  border-color: var(--green-primary);
+
+  background: #2e4b5f;
+}
+
+.layer-item input {
+  width: 100%;
+
+  margin-bottom: 10px;
+
+  background: transparent;
+
+  border: none;
+
+  color: white;
+
+  font-family: var(--font-main);
+
+  font-size: 16px;
+}
+
+.layer-controls {
+  display: flex;
+
+  gap: 6px;
+
+  flex-wrap: wrap;
+}
+
+.layer-controls button {
+  flex: 1;
+
+  min-width: 36px;
+
+  background: #1c2836;
+
+  color: white;
+
+  padding: 6px;
+
+  border-radius: 6px;
+
+  font-size: 14px;
+}
+
+.layer-controls button:hover {
+  background: var(--blue-primary);
+}
