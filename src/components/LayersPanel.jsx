@@ -1,18 +1,23 @@
-import { useLayers } from "../hooks/useLayers";
+function LayersPanel({
 
-function LayersPanel() {
+  layers,
 
-  const {
-    layers,
-    activeLayerId,
-    setActiveLayerId,
-    addLayer,
-    removeLayer,
-    renameLayer,
-    toggleVisibility,
-    toggleLock,
-    moveLayer,
-  } = useLayers();
+  activeLayerId,
+
+  setActiveLayerId,
+
+  addLayer,
+
+  removeLayer,
+
+  renameLayer,
+
+  toggleVisibility,
+
+  toggleLock,
+
+  moveLayer,
+}) {
 
   return (
     <aside className="layers-panel">
@@ -46,8 +51,6 @@ function LayersPanel() {
             }
           >
 
-            {/* NOME */}
-
             <input
               value={layer.name}
               onChange={(e) =>
@@ -58,11 +61,7 @@ function LayersPanel() {
               }
             />
 
-            {/* CONTROLES */}
-
             <div className="layer-controls">
-
-              {/* VISIBILITY */}
 
               <button
                 onClick={(e) => {
@@ -78,8 +77,6 @@ function LayersPanel() {
                   : "🚫"}
               </button>
 
-              {/* LOCK */}
-
               <button
                 onClick={(e) => {
                   e.stopPropagation();
@@ -92,8 +89,6 @@ function LayersPanel() {
                   : "🔓"}
               </button>
 
-              {/* MOVE UP */}
-
               <button
                 onClick={(e) => {
                   e.stopPropagation();
@@ -104,8 +99,6 @@ function LayersPanel() {
                 ↑
               </button>
 
-              {/* MOVE DOWN */}
-
               <button
                 onClick={(e) => {
                   e.stopPropagation();
@@ -115,8 +108,6 @@ function LayersPanel() {
               >
                 ↓
               </button>
-
-              {/* DELETE */}
 
               <button
                 onClick={(e) => {
