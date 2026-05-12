@@ -1,33 +1,69 @@
 export class GridSystem {
   constructor(size = 50) {
     this.size = size;
+
     this.enabled = true;
+
+    this.snapEnabled = true;
+
+    this.type = "square";
   }
+
+  // =========================
+  // TOGGLE GRID
+  // =========================
+
+  toggleGrid() {
+    this.enabled = !this.enabled;
+  }
+
+  // =========================
+  // TOGGLE SNAP
+  // =========================
+
+  toggleSnap() {
+    this.snapEnabled = !this.snapEnabled;
+  }
+
+  // =========================
+  // SNAP POSITION
+  // =========================
+
+  snapPosition(x, y) {
+    if (!this.snapEnabled) {
+      return { x, y };
+    }
+
+    return {
+      x:
+        Math.round(x / this.size) *
+        this.size,
+
+      y:
+        Math.round(y / this.size) *
+        this.size,
+    };
+  }
+
+  // =========================
+  // DRAW GRID
+  // =========================
 
   draw(ctx, width, height, camera) {
     if (!this.enabled) return;
 
-    const gridSize = this.size * camera.zoom;
+    const scaledSize =
+      this.size * camera.zoom;
 
-    ctx.strokeStyle = "#555";
+    // Evita grid minúsculo
+
+    if (scaledSize < 8) return;
+
+    ctx.save();
+
+    ctx.strokeStyle =
+      "rgba(255,255,255,0.12)";
+
     ctx.lineWidth = 1;
 
-    for (let x = camera.x % gridSize; x < width; x += gridSize) {
-      ctx.beginPath();
-      ctx.moveTo(x, 0);
-      ctx.lineTo(x, height);
-      ctx.stroke();
-    }
-
-    for (let y = camera.y % gridSize; y < height; y += gridSize) {
-      ctx.beginPath();
-      ctx.moveTo(0, y);
-      ctx.lineTo(width, y);
-      ctx.stroke();
-    }
-  }
-
-  snap(value) {
-    return Math.round(value / this.size) * this.size;
-  }
 }
