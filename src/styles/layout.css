@@ -22,9 +22,9 @@
   height: 60px;
   min-height: 60px;
 
-  background: #2a2a2a;
+  background: var(--toolbar-bg);
 
-  border-bottom: 1px solid #444;
+  border-bottom: 1px solid var(--border-color);
 
   display: flex;
   align-items: center;
@@ -54,9 +54,9 @@
   width: 260px;
   min-width: 260px;
 
-  background: #252525;
+  background: var(--sidebar-bg);
 
-  border-right: 1px solid #444;
+  border-right: 1px solid var(--border-color);
 
   overflow-y: auto;
 
@@ -74,7 +74,7 @@
 
   overflow: hidden;
 
-  background: #313131;
+  background: var(--canvas-bg);
 }
 
 /* =========================
@@ -85,9 +85,9 @@
   width: 260px;
   min-width: 260px;
 
-  background: #252525;
+  background: var(--panel-bg);
 
-  border-left: 1px solid #444;
+  border-left: 1px solid var(--border-color);
 
   overflow-y: auto;
 
@@ -102,9 +102,9 @@
   height: 28px;
   min-height: 28px;
 
-  background: #2a2a2a;
+  background: var(--toolbar-bg);
 
-  border-top: 1px solid #444;
+  border-top: 1px solid var(--border-color);
 
   display: flex;
   align-items: center;
