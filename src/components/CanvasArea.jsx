@@ -90,8 +90,6 @@ function CanvasArea() {
 
     const handleMouseDown = (e) => {
 
-      // Botão do meio OU direito
-
       if (
         e.button === 1 ||
         e.button === 2
@@ -126,6 +124,35 @@ function CanvasArea() {
       );
 
       canvasSystem.requestRedraw();
+    };
+
+    // =========================
+    // KEYBOARD
+    // =========================
+
+    const handleKeyDown = (e) => {
+
+      // Toggle Grid
+
+      if (
+        e.key.toLowerCase() === "g"
+      ) {
+
+        gridSystem.toggleGrid();
+
+        canvasSystem.requestRedraw();
+      }
+
+      // Toggle Snap
+
+      if (
+        e.key.toLowerCase() === "s"
+      ) {
+
+        gridSystem.toggleSnap();
+
+        canvasSystem.requestRedraw();
+      }
     };
 
     // =========================
@@ -194,6 +221,26 @@ function CanvasArea() {
         20,
         70
       );
+
+      ctx.fillText(
+        `Grid: ${
+          gridSystem.enabled
+            ? "ON"
+            : "OFF"
+        }`,
+        20,
+        90
+      );
+
+      ctx.fillText(
+        `Snap: ${
+          gridSystem.snapEnabled
+            ? "ON"
+            : "OFF"
+        }`,
+        20,
+        110
+      );
     };
 
     // =========================
@@ -221,6 +268,11 @@ function CanvasArea() {
     window.addEventListener(
       "mouseup",
       handleMouseUp
+    );
+
+    window.addEventListener(
+      "keydown",
+      handleKeyDown
     );
 
     canvas.addEventListener(
@@ -261,6 +313,11 @@ function CanvasArea() {
       window.removeEventListener(
         "mouseup",
         handleMouseUp
+      );
+
+      window.removeEventListener(
+        "keydown",
+        handleKeyDown
       );
 
       canvas.removeEventListener(
