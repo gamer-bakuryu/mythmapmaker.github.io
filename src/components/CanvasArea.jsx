@@ -4,9 +4,15 @@ import { CanvasSystem } from "../systems/canvasSystem";
 import { GridSystem } from "../systems/gridSystem";
 
 function CanvasArea() {
+
+  // =========================
+  // REFS
+  // =========================
+
   const canvasRef = useRef(null);
 
   const canvasSystemRef = useRef(null);
+
   const gridSystemRef = useRef(null);
 
   const mouseRef = useRef({
@@ -17,6 +23,7 @@ function CanvasArea() {
   });
 
   useEffect(() => {
+
     const canvas = canvasRef.current;
 
     if (!canvas) return;
@@ -25,41 +32,56 @@ function CanvasArea() {
     // SISTEMAS
     // =========================
 
-    const canvasSystem = new CanvasSystem(canvas);
+    const canvasSystem =
+      new CanvasSystem(canvas);
 
-    const gridSystem = new GridSystem(50);
+    const gridSystem =
+      new GridSystem(50);
 
-    canvasSystemRef.current = canvasSystem;
+    canvasSystemRef.current =
+      canvasSystem;
 
-    gridSystemRef.current = gridSystem;
+    gridSystemRef.current =
+      gridSystem;
 
     // =========================
     // MOUSE MOVE
     // =========================
 
     const handleMouseMove = (e) => {
-      mouseRef.current.x = e.clientX;
 
-      mouseRef.current.y = e.clientY;
+      mouseRef.current.x =
+        e.clientX;
 
-      const world = canvasSystem.screenToWorld(
-        e.clientX,
-        e.clientY
-      );
+      mouseRef.current.y =
+        e.clientY;
 
-      mouseRef.current.worldX = world.x;
+      const world =
+        canvasSystem.screenToWorld(
+          e.clientX,
+          e.clientY
+        );
 
-      mouseRef.current.worldY = world.y;
+      mouseRef.current.worldX =
+        world.x;
+
+      mouseRef.current.worldY =
+        world.y;
 
       // =========================
       // PAN
       // =========================
 
       if (canvasSystem.isPanning) {
-        canvasSystem.camera.x += e.movementX;
 
-        canvasSystem.camera.y += e.movementY;
+        canvasSystem.camera.x +=
+          e.movementX;
+
+        canvasSystem.camera.y +=
+          e.movementY;
       }
+
+      canvasSystem.requestRedraw();
     };
 
     // =========================
@@ -67,9 +89,13 @@ function CanvasArea() {
     // =========================
 
     const handleMouseDown = (e) => {
+
       // Botão do meio OU direito
 
-      if (e.button === 1 || e.button === 2) {
+      if (
+        e.button === 1 ||
+        e.button === 2
+      ) {
         canvasSystem.isPanning = true;
       }
     };
@@ -79,14 +105,18 @@ function CanvasArea() {
     // =========================
 
     const handleMouseUp = () => {
+
       canvasSystem.isPanning = false;
+
+      canvasSystem.requestRedraw();
     };
 
     // =========================
-    // ZOOM MELHORADO
+    // ZOOM
     // =========================
 
     const handleWheel = (e) => {
+
       e.preventDefault();
 
       canvasSystem.zoomAt(
@@ -94,16 +124,15 @@ function CanvasArea() {
         e.clientY,
         e.deltaY
       );
+
+      canvasSystem.requestRedraw();
     };
 
     // =========================
-    // RENDER LOOP
+    // RENDER SCENE
     // =========================
 
-    const render = () => {
-      const ctx = canvasSystem.ctx;
-
-      canvasSystem.clear();
+    const renderScene = (ctx) => {
 
       // =========================
       // FUNDO
@@ -135,7 +164,8 @@ function CanvasArea() {
 
       ctx.fillStyle = "white";
 
-      ctx.font = "14px Garamond";
+      ctx.font =
+        "14px Garamond";
 
       ctx.fillText(
         `Mouse: ${Math.floor(
@@ -164,11 +194,15 @@ function CanvasArea() {
         20,
         70
       );
-
-      requestAnimationFrame(render);
     };
 
-    render();
+    // =========================
+    // START LOOP
+    // =========================
+
+    canvasSystem.startRenderLoop(
+      renderScene
+    );
 
     // =========================
     // EVENTS
@@ -211,6 +245,9 @@ function CanvasArea() {
     // =========================
 
     return () => {
+
+      canvasSystem.stopRenderLoop();
+
       window.removeEventListener(
         "mousemove",
         handleMouseMove
@@ -231,14 +268,17 @@ function CanvasArea() {
         handleWheel
       );
     };
+
   }, []);
 
   return (
     <main className="canvas-area">
+
       <canvas
         ref={canvasRef}
         id="map-canvas"
       />
+
     </main>
   );
 }
