@@ -1,23 +1,51 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+
+const STORAGE_KEY = "mythmapmaker_layers";
 
 export function useLayers() {
 
-  const [layers, setLayers] = useState([
-    {
-      id: crypto.randomUUID(),
+  const [layers, setLayers] = useState(() => {
 
-      name: "Base Layer",
+    const saved =
+      localStorage.getItem(STORAGE_KEY);
 
-      visible: true,
+    if (saved) {
+      return JSON.parse(saved);
+    }
 
-      locked: false,
+    return [
+      {
+        id: crypto.randomUUID(),
 
-      objects: [],
-    },
-  ]);
+        name: "Base Layer",
+
+        visible: true,
+
+        locked: false,
+
+        objects: [],
+      },
+    ];
+  });
 
   const [activeLayerId, setActiveLayerId] =
-    useState(layers[0].id);
+    useState(layers[0]?.id);
+
+  const [selectedObjects, setSelectedObjects] =
+    useState([]);
+
+  // =========================
+  // SAVE
+  // =========================
+
+  useEffect(() => {
+
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify(layers)
+    );
+
+  }, [layers]);
 
   // =========================
   // ADD LAYER
@@ -26,6 +54,7 @@ export function useLayers() {
   const addLayer = () => {
 
     const newLayer = {
+
       id: crypto.randomUUID(),
 
       name: `Layer ${layers.length + 1}`,
@@ -46,7 +75,7 @@ export function useLayers() {
   };
 
   // =========================
-  // REMOVE LAYER
+  // REMOVE
   // =========================
 
   const removeLayer = (id) => {
@@ -61,16 +90,18 @@ export function useLayers() {
     setLayers(updated);
 
     if (activeLayerId === id) {
-
       setActiveLayerId(updated[0].id);
     }
   };
 
   // =========================
-  // RENAME LAYER
+  // RENAME
   // =========================
 
-  const renameLayer = (id, newName) => {
+  const renameLayer = (
+    id,
+    newName
+  ) => {
 
     setLayers((prev) =>
       prev.map((layer) =>
@@ -85,7 +116,7 @@ export function useLayers() {
   };
 
   // =========================
-  // TOGGLE VISIBILITY
+  // VISIBILITY
   // =========================
 
   const toggleVisibility = (id) => {
@@ -104,7 +135,7 @@ export function useLayers() {
   };
 
   // =========================
-  // TOGGLE LOCK
+  // LOCK
   // =========================
 
   const toggleLock = (id) => {
@@ -123,7 +154,7 @@ export function useLayers() {
   };
 
   // =========================
-  // MOVE LAYER
+  // MOVE
   // =========================
 
   const moveLayer = (
@@ -154,6 +185,88 @@ export function useLayers() {
     setLayers(updated);
   };
 
+  // =========================
+  // ADD OBJECT
+  // =========================
+
+  const addObjectToLayer = (
+    layerId,
+    object
+  ) => {
+
+    setLayers((prev) =>
+      prev.map((layer) =>
+        layer.id === layerId
+          ? {
+              ...layer,
+              objects: [
+                ...layer.objects,
+                object,
+              ],
+            }
+          : layer
+      )
+    );
+  };
+
+  // =========================
+  // UPDATE OBJECT
+  // =========================
+
+  const updateObject = (
+    layerId,
+    objectId,
+    updates
+  ) => {
+
+    setLayers((prev) =>
+      prev.map((layer) =>
+        layer.id === layerId
+          ? {
+              ...layer,
+
+              objects:
+                layer.objects.map(
+                  (obj) =>
+                    obj.id === objectId
+                      ? {
+                          ...obj,
+                          ...updates,
+                        }
+                      : obj
+                ),
+            }
+          : layer
+      )
+    );
+  };
+
+  // =========================
+  // DELETE OBJECT
+  // =========================
+
+  const removeObject = (
+    layerId,
+    objectId
+  ) => {
+
+    setLayers((prev) =>
+      prev.map((layer) =>
+        layer.id === layerId
+          ? {
+              ...layer,
+
+              objects:
+                layer.objects.filter(
+                  (obj) =>
+                    obj.id !== objectId
+                ),
+            }
+          : layer
+      )
+    );
+  };
+
   return {
 
     layers,
@@ -161,6 +274,10 @@ export function useLayers() {
     activeLayerId,
 
     setActiveLayerId,
+
+    selectedObjects,
+
+    setSelectedObjects,
 
     addLayer,
 
@@ -173,5 +290,11 @@ export function useLayers() {
     toggleLock,
 
     moveLayer,
+
+    addObjectToLayer,
+
+    updateObject,
+
+    removeObject,
   };
 }
