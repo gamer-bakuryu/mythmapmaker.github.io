@@ -4,9 +4,80 @@
   box-sizing: border-box;
 }
 
+:root {
+
+  /* =========================
+     CORES
+  ========================= */
+
+  --bg-main: #0f1720;
+
+  --bg-secondary: #16202b;
+
+  --sidebar-bg: #111927;
+
+  --panel-bg: #1a2636;
+
+  --toolbar-bg: #152233;
+
+  --canvas-bg: #233142;
+
+  --border-color: #2b394a;
+
+  --green-primary: #2d6a4f;
+
+  --green-hover: #40916c;
+
+  --blue-primary: #3a86ff;
+
+  --text-primary: #f1f1f1;
+
+  --text-secondary: #b8c1cc;
+
+  /* =========================
+     ESPAÇAMENTOS
+  ========================= */
+
+  --spacing-xs: 5px;
+
+  --spacing-sm: 10px;
+
+  --spacing-md: 15px;
+
+  --spacing-lg: 20px;
+
+  --radius-sm: 6px;
+
+  --radius-md: 10px;
+
+  /* =========================
+     FONTES
+  ========================= */
+
+  --font-main: Garamond, serif;
+}
+
 body {
-  background: #1e1e1e;
-  color: white;
-  font-family: Arial, sans-serif;
+  width: 100vw;
+  height: 100vh;
+
   overflow: hidden;
+
+  background: var(--bg-main);
+
+  color: var(--text-primary);
+
+  font-family: var(--font-main);
+
+  user-select: none;
+}
+
+button {
+  border: none;
+
+  outline: none;
+
+  cursor: pointer;
+
+  transition: 0.2s;
 }
