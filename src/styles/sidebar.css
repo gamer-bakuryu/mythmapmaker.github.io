@@ -1,18 +1,36 @@
 .sidebar {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+
+  gap: var(--spacing-sm);
+}
+
+.sidebar h2 {
+  margin-bottom: var(--spacing-md);
+
+  color: var(--green-primary);
+
+  font-size: 24px;
 }
 
 .sidebar button {
-  background: #3a3a3a;
-  border: none;
+  width: 100%;
+
+  background: var(--green-primary);
+
   color: white;
-  padding: 10px;
-  cursor: pointer;
-  border-radius: 6px;
+
+  padding: 12px;
+
+  border-radius: var(--radius-sm);
+
+  font-family: var(--font-main);
+
+  font-size: 16px;
+
+  text-align: left;
 }
 
 .sidebar button:hover {
-  background: #4a4a4a;
+  background: var(--green-hover);
 }
