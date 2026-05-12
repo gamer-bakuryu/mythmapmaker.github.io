@@ -21,18 +21,25 @@ function CanvasArea() {
 
     if (!canvas) return;
 
-    // Inicializa sistemas
+    // =========================
+    // SISTEMAS
+    // =========================
+
     const canvasSystem = new CanvasSystem(canvas);
+
     const gridSystem = new GridSystem(50);
 
     canvasSystemRef.current = canvasSystem;
+
     gridSystemRef.current = gridSystem;
 
     // =========================
     // MOUSE MOVE
     // =========================
+
     const handleMouseMove = (e) => {
       mouseRef.current.x = e.clientX;
+
       mouseRef.current.y = e.clientY;
 
       const world = canvasSystem.screenToWorld(
@@ -41,11 +48,16 @@ function CanvasArea() {
       );
 
       mouseRef.current.worldX = world.x;
+
       mouseRef.current.worldY = world.y;
 
+      // =========================
       // PAN
+      // =========================
+
       if (canvasSystem.isPanning) {
         canvasSystem.camera.x += e.movementX;
+
         canvasSystem.camera.y += e.movementY;
       }
     };
@@ -53,7 +65,10 @@ function CanvasArea() {
     // =========================
     // PAN START
     // =========================
+
     const handleMouseDown = (e) => {
+      // Botão do meio OU direito
+
       if (e.button === 1 || e.button === 2) {
         canvasSystem.isPanning = true;
       }
@@ -62,40 +77,40 @@ function CanvasArea() {
     // =========================
     // PAN END
     // =========================
+
     const handleMouseUp = () => {
       canvasSystem.isPanning = false;
     };
 
     // =========================
-    // ZOOM
+    // ZOOM MELHORADO
     // =========================
+
     const handleWheel = (e) => {
       e.preventDefault();
 
-      const zoomIntensity = 0.1;
-
-      if (e.deltaY < 0) {
-        canvasSystem.camera.zoom += zoomIntensity;
-      } else {
-        canvasSystem.camera.zoom -= zoomIntensity;
-      }
-
-      canvasSystem.camera.zoom = Math.max(
-        0.2,
-        Math.min(5, canvasSystem.camera.zoom)
+      canvasSystem.zoomAt(
+        e.clientX,
+        e.clientY,
+        e.deltaY
       );
     };
 
     // =========================
     // RENDER LOOP
     // =========================
+
     const render = () => {
       const ctx = canvasSystem.ctx;
 
       canvasSystem.clear();
 
-      // Fundo
-      ctx.fillStyle = "#2c2c2c";
+      // =========================
+      // FUNDO
+      // =========================
+
+      ctx.fillStyle = "#233142";
+
       ctx.fillRect(
         0,
         0,
@@ -103,7 +118,10 @@ function CanvasArea() {
         canvas.height
       );
 
-      // Grid
+      // =========================
+      // GRID
+      // =========================
+
       gridSystem.draw(
         ctx,
         canvas.width,
@@ -111,20 +129,40 @@ function CanvasArea() {
         canvasSystem.camera
       );
 
-      // Coordenadas
+      // =========================
+      // HUD
+      // =========================
+
       ctx.fillStyle = "white";
-      ctx.font = "14px Arial";
+
+      ctx.font = "14px Garamond";
 
       ctx.fillText(
-        `Mouse: ${Math.floor(mouseRef.current.worldX)}, ${Math.floor(mouseRef.current.worldY)}`,
+        `Mouse: ${Math.floor(
+          mouseRef.current.worldX
+        )}, ${Math.floor(
+          mouseRef.current.worldY
+        )}`,
         20,
         30
       );
 
       ctx.fillText(
-        `Zoom: ${canvasSystem.camera.zoom.toFixed(2)}`,
+        `Zoom: ${canvasSystem.camera.zoom.toFixed(
+          2
+        )}`,
         20,
         50
+      );
+
+      ctx.fillText(
+        `Camera: ${Math.floor(
+          canvasSystem.camera.x
+        )}, ${Math.floor(
+          canvasSystem.camera.y
+        )}`,
+        20,
+        70
       );
 
       requestAnimationFrame(render);
@@ -135,20 +173,42 @@ function CanvasArea() {
     // =========================
     // EVENTS
     // =========================
-    window.addEventListener("mousemove", handleMouseMove);
 
-    window.addEventListener("mousedown", handleMouseDown);
-
-    window.addEventListener("mouseup", handleMouseUp);
-
-    canvas.addEventListener("wheel", handleWheel, {
-      passive: false,
-    });
-
-    // REMOVE CONTEXT MENU
-    canvas.addEventListener("contextmenu", (e) =>
-      e.preventDefault()
+    window.addEventListener(
+      "mousemove",
+      handleMouseMove
     );
+
+    window.addEventListener(
+      "mousedown",
+      handleMouseDown
+    );
+
+    window.addEventListener(
+      "mouseup",
+      handleMouseUp
+    );
+
+    canvas.addEventListener(
+      "wheel",
+      handleWheel,
+      {
+        passive: false,
+      }
+    );
+
+    // =========================
+    // REMOVER MENU DIREITO
+    // =========================
+
+    canvas.addEventListener(
+      "contextmenu",
+      (e) => e.preventDefault()
+    );
+
+    // =========================
+    // CLEANUP
+    // =========================
 
     return () => {
       window.removeEventListener(
