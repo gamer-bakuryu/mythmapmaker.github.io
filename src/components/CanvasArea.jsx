@@ -5,21 +5,15 @@ import { GridSystem } from "../systems/gridSystem";
 
 function CanvasArea() {
 
-  // =========================
-  // REFS
-  // =========================
-
   const canvasRef = useRef(null);
-
-  const canvasSystemRef = useRef(null);
-
-  const gridSystemRef = useRef(null);
 
   const mouseRef = useRef({
     x: 0,
     y: 0,
     worldX: 0,
     worldY: 0,
+    snappedX: 0,
+    snappedY: 0,
   });
 
   useEffect(() => {
@@ -29,7 +23,7 @@ function CanvasArea() {
     if (!canvas) return;
 
     // =========================
-    // SISTEMAS
+    // SYSTEMS
     // =========================
 
     const canvasSystem =
@@ -37,12 +31,6 @@ function CanvasArea() {
 
     const gridSystem =
       new GridSystem(50);
-
-    canvasSystemRef.current =
-      canvasSystem;
-
-    gridSystemRef.current =
-      gridSystem;
 
     // =========================
     // MOUSE MOVE
@@ -67,6 +55,22 @@ function CanvasArea() {
 
       mouseRef.current.worldY =
         world.y;
+
+      // =========================
+      // SNAP
+      // =========================
+
+      const snapped =
+        gridSystem.snapPosition(
+          world.x,
+          world.y
+        );
+
+      mouseRef.current.snappedX =
+        snapped.x;
+
+      mouseRef.current.snappedY =
+        snapped.y;
 
       // =========================
       // PAN
@@ -94,6 +98,7 @@ function CanvasArea() {
         e.button === 1 ||
         e.button === 2
       ) {
+
         canvasSystem.isPanning = true;
       }
     };
@@ -132,22 +137,18 @@ function CanvasArea() {
 
     const handleKeyDown = (e) => {
 
-      // Toggle Grid
+      // G = Toggle Grid
 
-      if (
-        e.key.toLowerCase() === "g"
-      ) {
+      if (e.key.toLowerCase() === "g") {
 
         gridSystem.toggleGrid();
 
         canvasSystem.requestRedraw();
       }
 
-      // Toggle Snap
+      // S = Toggle Snap
 
-      if (
-        e.key.toLowerCase() === "s"
-      ) {
+      if (e.key.toLowerCase() === "s") {
 
         gridSystem.toggleSnap();
 
@@ -156,13 +157,13 @@ function CanvasArea() {
     };
 
     // =========================
-    // RENDER SCENE
+    // RENDER
     // =========================
 
     const renderScene = (ctx) => {
 
       // =========================
-      // FUNDO
+      // BACKGROUND
       // =========================
 
       ctx.fillStyle = "#233142";
@@ -186,6 +187,31 @@ function CanvasArea() {
       );
 
       // =========================
+      // SNAP PREVIEW
+      // =========================
+
+      const snappedScreen =
+        canvasSystem.worldToScreen(
+          mouseRef.current.snappedX,
+          mouseRef.current.snappedY
+        );
+
+      ctx.fillStyle =
+        "rgba(58,134,255,0.8)";
+
+      ctx.beginPath();
+
+      ctx.arc(
+        snappedScreen.x,
+        snappedScreen.y,
+        5,
+        0,
+        Math.PI * 2
+      );
+
+      ctx.fill();
+
+      // =========================
       // HUD
       // =========================
 
@@ -205,18 +231,18 @@ function CanvasArea() {
       );
 
       ctx.fillText(
-        `Zoom: ${canvasSystem.camera.zoom.toFixed(
-          2
+        `Snap: ${Math.floor(
+          mouseRef.current.snappedX
+        )}, ${Math.floor(
+          mouseRef.current.snappedY
         )}`,
         20,
         50
       );
 
       ctx.fillText(
-        `Camera: ${Math.floor(
-          canvasSystem.camera.x
-        )}, ${Math.floor(
-          canvasSystem.camera.y
+        `Zoom: ${canvasSystem.camera.zoom.toFixed(
+          2
         )}`,
         20,
         70
@@ -282,10 +308,6 @@ function CanvasArea() {
         passive: false,
       }
     );
-
-    // =========================
-    // REMOVER MENU DIREITO
-    // =========================
 
     canvas.addEventListener(
       "contextmenu",
