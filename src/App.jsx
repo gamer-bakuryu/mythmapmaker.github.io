@@ -4,28 +4,44 @@ import CanvasArea from "./components/CanvasArea";
 import LayersPanel from "./components/LayersPanel";
 import StatusBar from "./components/StatusBar";
 
+import { useLayers } from "./hooks/useLayers";
+
 function App() {
+
+  const layerSystem =
+    useLayers();
+
   return (
     <div className="app-container">
 
-      {/* TOPO */}
       <Toolbar />
 
-      {/* CONTEÚDO PRINCIPAL */}
       <div className="editor-layout">
 
-        {/* MENU ESQUERDO */}
         <Sidebar />
 
-        {/* ÁREA CENTRAL */}
-        <CanvasArea />
+        <CanvasArea
+          layers={layerSystem.layers}
+          activeLayerId={
+            layerSystem.activeLayerId
+          }
+          addObjectToLayer={
+            layerSystem.addObjectToLayer
+          }
+          selectedObjects={
+            layerSystem.selectedObjects
+          }
+          setSelectedObjects={
+            layerSystem.setSelectedObjects
+          }
+        />
 
-        {/* PAINEL DIREITO */}
-        <LayersPanel />
+        <LayersPanel
+          {...layerSystem}
+        />
 
       </div>
 
-      {/* BARRA INFERIOR */}
       <StatusBar />
 
     </div>
