@@ -4,32 +4,70 @@ export class CanvasSystem {
 
     this.ctx = canvas.getContext("2d");
 
+    // =========================
+    // CÂMERA
+    // =========================
+
     this.camera = {
       x: 0,
       y: 0,
       zoom: 1,
     };
 
+    // =========================
+    // LIMITES DE ZOOM
+    // =========================
+
     this.minZoom = 0.2;
+
     this.maxZoom = 5;
 
+    // =========================
+    // CONTROLES
+    // =========================
+
     this.isPanning = false;
+
+    // =========================
+    // REDRAW
+    // =========================
+
+    this.needsRedraw = true;
+
+    this.animationFrame = null;
+
+    // =========================
+    // RESIZE
+    // =========================
 
     this.resize();
 
     window.addEventListener(
       "resize",
-      () => this.resize()
+      () => {
+        this.resize();
+
+        this.requestRedraw();
+      }
     );
   }
+
+  // =========================
+  // RESIZE
+  // =========================
 
   resize() {
     const rect =
       this.canvas.parentElement.getBoundingClientRect();
 
     this.canvas.width = rect.width;
+
     this.canvas.height = rect.height;
   }
+
+  // =========================
+  // LIMPAR CANVAS
+  // =========================
 
   clear() {
     this.ctx.clearRect(
@@ -39,6 +77,10 @@ export class CanvasSystem {
       this.canvas.height
     );
   }
+
+  // =========================
+  // CONVERSÃO SCREEN → WORLD
+  // =========================
 
   screenToWorld(x, y) {
     return {
@@ -52,6 +94,10 @@ export class CanvasSystem {
     };
   }
 
+  // =========================
+  // CONVERSÃO WORLD → SCREEN
+  // =========================
+
   worldToScreen(x, y) {
     return {
       x:
@@ -64,6 +110,10 @@ export class CanvasSystem {
     };
   }
 
+  // =========================
+  // ZOOM NO CURSOR
+  // =========================
+
   zoomAt(mouseX, mouseY, delta) {
     const zoomFactor = 0.1;
 
@@ -75,10 +125,17 @@ export class CanvasSystem {
       this.camera.zoom -= zoomFactor;
     }
 
+    // Clamp zoom
+
     this.camera.zoom = Math.max(
       this.minZoom,
-      Math.min(this.maxZoom, this.camera.zoom)
+      Math.min(
+        this.maxZoom,
+        this.camera.zoom
+      )
     );
+
+    // Ajustar câmera para zoom no cursor
 
     const zoomRatio =
       this.camera.zoom / oldZoom;
@@ -92,5 +149,51 @@ export class CanvasSystem {
       mouseY -
       (mouseY - this.camera.y) *
         zoomRatio;
+  }
+
+  // =========================
+  // REDRAW
+  // =========================
+
+  requestRedraw() {
+    this.needsRedraw = true;
+  }
+
+  // =========================
+  // RENDER LOOP
+  // =========================
+
+  startRenderLoop(renderCallback) {
+
+    const renderLoop = () => {
+
+      if (this.needsRedraw) {
+
+        this.clear();
+
+        renderCallback(this.ctx);
+
+        this.needsRedraw = false;
+      }
+
+      this.animationFrame =
+        requestAnimationFrame(renderLoop);
+    };
+
+    renderLoop();
+  }
+
+  // =========================
+  // STOP LOOP
+  // =========================
+
+  stopRenderLoop() {
+
+    if (this.animationFrame) {
+
+      cancelAnimationFrame(
+        this.animationFrame
+      );
+    }
   }
 }
