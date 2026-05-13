@@ -1,40 +1,38 @@
 :root {
 
-  --sidebar-width: 260px;
-
-  --layers-width: 280px;
-
   --toolbar-height: 60px;
 
   --statusbar-height: 28px;
+
+  --sidebar-width: 260px;
+
+  --layers-width: 280px;
 }
 
-.app-container {
+/* =========================
+   APP
+========================= */
+
+.app-shell {
 
   width: 100vw;
 
   height: 100vh;
 
-  overflow: hidden;
-
   display: flex;
 
   flex-direction: column;
 
+  overflow: hidden;
+
   background: #16202a;
-
-  position: relative;
-
-  /* =========================
-     REMOVE 3D
-  ========================= */
-
-  transform: none !important;
-
-  perspective: none !important;
 }
 
-.editor-layout {
+/* =========================
+   MAIN EDITOR
+========================= */
+
+.editor-shell {
 
   flex: 1;
 
@@ -48,43 +46,17 @@
   overflow: hidden;
 
   min-height: 0;
-
-  position: relative;
-
-  /* =========================
-     REMOVE 3D
-  ========================= */
-
-  transform: none !important;
-
-  perspective: none !important;
 }
 
-.sidebar {
-
-  overflow-y: auto;
-
-  background: #1b2631;
-
-  border-right:
-    1px solid rgba(255,255,255,0.08);
-}
-
-.layers-panel {
-
-  overflow-y: auto;
-
-  background: #1b2631;
-
-  border-left:
-    1px solid rgba(255,255,255,0.08);
-}
+/* =========================
+   TOOLBAR
+========================= */
 
 .toolbar {
 
   height: var(--toolbar-height);
 
-  background: #101820;
+  background: #0f1720;
 
   border-bottom:
     1px solid rgba(255,255,255,0.08);
@@ -98,11 +70,15 @@
   flex-shrink: 0;
 }
 
+/* =========================
+   STATUSBAR
+========================= */
+
 .statusbar {
 
   height: var(--statusbar-height);
 
-  background: #101820;
+  background: #0f1720;
 
   border-top:
     1px solid rgba(255,255,255,0.08);
