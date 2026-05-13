@@ -21,12 +21,14 @@ export class CanvasSystem {
     };
 
     // =========================
-    // RENDER LOOP
+    // LOOP
     // =========================
 
     this.animationFrame = null;
 
     this.needsRedraw = true;
+
+    this.renderCallback = null;
 
     // =========================
     // PAN
@@ -34,16 +36,15 @@ export class CanvasSystem {
 
     this.isPanning = false;
 
-    this.lastMouse = {
-      x: 0,
-      y: 0,
-    };
+    this.lastMouseX = 0;
+
+    this.lastMouseY = 0;
 
     // =========================
     // INIT
     // =========================
 
-    this.resizeCanvas();
+    this.resize();
 
     this.setupEvents();
   }
@@ -52,7 +53,7 @@ export class CanvasSystem {
   // RESIZE
   // =========================
 
-  resizeCanvas() {
+  resize() {
 
     this.canvas.width =
       this.canvas.clientWidth;
@@ -71,7 +72,7 @@ export class CanvasSystem {
 
     window.addEventListener(
       "resize",
-      () => this.resizeCanvas()
+      () => this.resize()
     );
 
     // =========================
@@ -80,62 +81,117 @@ export class CanvasSystem {
 
     this.canvas.addEventListener(
       "wheel",
+
       (e) => {
 
         e.preventDefault();
 
-        const zoomAmount =
-          e.deltaY > 0
-            ? 0.9
-            : 1.1;
+        const zoomSpeed =
+          0.1;
 
-        this.camera.zoom *=
-          zoomAmount;
+        const oldZoom =
+          this.camera.zoom;
+
+        // =========================
+        // CURSOR POSITION
+        // =========================
+
+        const rect =
+          this.canvas.getBoundingClientRect();
+
+        const mouseX =
+          e.clientX - rect.left;
+
+        const mouseY =
+          e.clientY - rect.top;
+
+        const worldPosBefore =
+          this.screenToWorld(
+            e.clientX,
+            e.clientY
+          );
+
+        // =========================
+        // APPLY ZOOM
+        // =========================
+
+        if (e.deltaY < 0) {
+
+          this.camera.zoom *=
+            1 + zoomSpeed;
+
+        } else {
+
+          this.camera.zoom *=
+            1 - zoomSpeed;
+        }
+
+        // =========================
+        // CLAMP
+        // =========================
 
         this.camera.zoom =
           Math.max(
             0.2,
             Math.min(
-              this.camera.zoom,
-              5
+              4,
+              this.camera.zoom
             )
           );
 
+        // =========================
+        // KEEP CURSOR FIXED
+        // =========================
+
+        const worldPosAfter =
+          this.screenToWorld(
+            e.clientX,
+            e.clientY
+          );
+
+        this.camera.x +=
+          worldPosBefore.x -
+          worldPosAfter.x;
+
+        this.camera.y +=
+          worldPosBefore.y -
+          worldPosAfter.y;
+
         this.requestRedraw();
-      }
+      },
+
+      { passive: false }
     );
 
     // =========================
-    // PAN
+    // PAN START
     // =========================
 
     this.canvas.addEventListener(
       "mousedown",
+
       (e) => {
 
-        if (e.button !== 1) return;
+        if (e.button !== 1)
+          return;
 
         this.isPanning = true;
 
-        this.lastMouse = {
+        this.lastMouseX =
+          e.clientX;
 
-          x: e.clientX,
-
-          y: e.clientY,
-        };
+        this.lastMouseY =
+          e.clientY;
       }
     );
 
-    window.addEventListener(
-      "mouseup",
-      () => {
-
-        this.isPanning = false;
-      }
-    );
+    // =========================
+    // PAN MOVE
+    // =========================
 
     window.addEventListener(
       "mousemove",
+
       (e) => {
 
         if (!this.isPanning)
@@ -143,11 +199,11 @@ export class CanvasSystem {
 
         const dx =
           e.clientX -
-          this.lastMouse.x;
+          this.lastMouseX;
 
         const dy =
           e.clientY -
-          this.lastMouse.y;
+          this.lastMouseY;
 
         this.camera.x -=
           dx / this.camera.zoom;
@@ -155,56 +211,82 @@ export class CanvasSystem {
         this.camera.y -=
           dy / this.camera.zoom;
 
-        this.lastMouse = {
+        this.lastMouseX =
+          e.clientX;
 
-          x: e.clientX,
-
-          y: e.clientY,
-        };
+        this.lastMouseY =
+          e.clientY;
 
         this.requestRedraw();
+      }
+    );
+
+    // =========================
+    // PAN END
+    // =========================
+
+    window.addEventListener(
+      "mouseup",
+
+      () => {
+
+        this.isPanning = false;
       }
     );
   }
 
   // =========================
-  // WORLD -> SCREEN
+  // SCREEN TO WORLD
   // =========================
 
-  worldToScreen(x, y) {
-
-    return {
-
-      x:
-        (x - this.camera.x) *
-        this.camera.zoom,
-
-      y:
-        (y - this.camera.y) *
-        this.camera.zoom,
-    };
-  }
-
-  // =========================
-  // SCREEN -> WORLD
-  // =========================
-
-  screenToWorld(x, y) {
+  screenToWorld(
+    screenX,
+    screenY
+  ) {
 
     const rect =
       this.canvas.getBoundingClientRect();
 
+    const localX =
+      screenX - rect.left;
+
+    const localY =
+      screenY - rect.top;
+
     return {
 
       x:
-        (x - rect.left) /
+        localX /
           this.camera.zoom +
         this.camera.x,
 
       y:
-        (y - rect.top) /
+        localY /
           this.camera.zoom +
         this.camera.y,
+    };
+  }
+
+  // =========================
+  // WORLD TO SCREEN
+  // =========================
+
+  worldToScreen(
+    worldX,
+    worldY
+  ) {
+
+    return {
+
+      x:
+        (worldX -
+          this.camera.x) *
+        this.camera.zoom,
+
+      y:
+        (worldY -
+          this.camera.y) *
+        this.camera.zoom,
     };
   }
 
@@ -221,35 +303,63 @@ export class CanvasSystem {
   // LOOP
   // =========================
 
-  startRenderLoop(render) {
+  startRenderLoop(
+    renderCallback
+  ) {
+
+    this.renderCallback =
+      renderCallback;
 
     const loop = () => {
 
-      if (this.needsRedraw) {
+      if (
+        this.needsRedraw
+      ) {
 
-        this.ctx.clearRect(
-          0,
-          0,
-          this.canvas.width,
-          this.canvas.height
-        );
-
-        render(this.ctx);
-
-        this.needsRedraw = false;
+        this.render();
       }
 
       this.animationFrame =
-        requestAnimationFrame(loop);
+        requestAnimationFrame(
+          loop
+        );
     };
 
     loop();
   }
 
+  // =========================
+  // RENDER
+  // =========================
+
+  render() {
+
+    if (
+      !this.renderCallback
+    ) {
+      return;
+    }
+
+    this.renderCallback(
+      this.ctx
+    );
+
+    this.needsRedraw = false;
+  }
+
+  // =========================
+  // STOP
+  // =========================
+
   stopRenderLoop() {
 
-    cancelAnimationFrame(
+    if (
       this.animationFrame
-    );
+    ) {
+
+      cancelAnimationFrame(
+        this.animationFrame
+      );
+    }
   }
 }
