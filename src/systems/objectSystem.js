@@ -1,145 +1,43 @@
 export class ObjectSystem {
 
-  // =========================
-  // SELECT
-  // =========================
-
-  static selectObject(
-    selectedObjects,
-    objectId,
-    multiSelect = false
-  ) {
-
-    if (!multiSelect) {
-
-      return [objectId];
-    }
-
-    if (
-      selectedObjects.includes(
-        objectId
-      )
-    ) {
-
-      return selectedObjects.filter(
-        (id) => id !== objectId
-      );
-    }
-
-    return [
-      ...selectedObjects,
-      objectId,
-    ];
+  static hitTest(obj, x, y) {
+    return (
+      x >= obj.x &&
+      x <= obj.x + obj.width &&
+      y >= obj.y &&
+      y <= obj.y + obj.height
+    );
   }
 
-  // =========================
-  // DELETE
-  // =========================
+  static findTopObject(layers, x, y) {
+    for (let l = layers.length - 1; l >= 0; l--) {
+      const layer = layers[l];
 
-  static deleteSelected(
-    layers,
-    selectedObjects
-  ) {
+      if (!layer.visible) continue;
 
-    return layers.map((layer) => ({
+      for (let i = layer.objects.length - 1; i >= 0; i--) {
+        const obj = layer.objects[i];
 
-      ...layer,
-
-      objects:
-        layer.objects.filter(
-          (obj) =>
-            !selectedObjects.includes(
-              obj.id
-            )
-        ),
-    }));
-  }
-
-  // =========================
-  // DUPLICATE
-  // =========================
-
-  static duplicateSelected(
-    layers,
-    selectedObjects
-  ) {
-
-    return layers.map((layer) => {
-
-      const duplicates = [];
-
-      layer.objects.forEach(
-        (obj) => {
-
-          if (
-            selectedObjects.includes(
-              obj.id
-            )
-          ) {
-
-            duplicates.push({
-
-              ...obj,
-
-              id:
-                crypto.randomUUID(),
-
-              x: obj.x + 40,
-
-              y: obj.y + 40,
-            });
-          }
+        if (this.hitTest(obj, x, y)) {
+          return { obj, layer };
         }
-      );
-
-      return {
-
-        ...layer,
-
-        objects: [
-          ...layer.objects,
-          ...duplicates,
-        ],
-      };
-    });
+      }
+    }
+    return null;
   }
 
-  // =========================
-  // MOVE MULTI
-  // =========================
+  static deleteObjects(layers, ids) {
+    for (const layer of layers) {
+      layer.objects = layer.objects.filter(o => !ids.includes(o.id));
+    }
+  }
 
-  static moveSelected(
-    layers,
-    selectedObjects,
-    dx,
-    dy
-  ) {
-
-    return layers.map((layer) => ({
-
-      ...layer,
-
-      objects:
-        layer.objects.map((obj) => {
-
-          if (
-            selectedObjects.includes(
-              obj.id
-            )
-          ) {
-
-            return {
-
-              ...obj,
-
-              x: obj.x + dx,
-
-              y: obj.y + dy,
-            };
-          }
-
-          return obj;
-        }),
-    }));
+  static duplicateObject(obj) {
+    return {
+      ...obj,
+      id: crypto.randomUUID(),
+      x: obj.x + 20,
+      y: obj.y + 20
+    };
   }
 }
