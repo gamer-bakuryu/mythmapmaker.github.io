@@ -1,9 +1,6 @@
 import {
-
   useEffect,
-
   useRef,
-
 } from "react";
 
 import { CanvasSystem }
@@ -46,7 +43,45 @@ function CanvasArea({
     useRef({});
 
   // =========================
-  // DRAG STATE
+  // LIVE STATE REFS
+  // =========================
+
+  const layersRef =
+    useRef(layers);
+
+  const activeLayerRef =
+    useRef(activeLayerId);
+
+  const selectedRef =
+    useRef(selectedObjects);
+
+  // =========================
+  // SYNC REFS
+  // =========================
+
+  useEffect(() => {
+
+    layersRef.current =
+      layers;
+
+  }, [layers]);
+
+  useEffect(() => {
+
+    activeLayerRef.current =
+      activeLayerId;
+
+  }, [activeLayerId]);
+
+  useEffect(() => {
+
+    selectedRef.current =
+      selectedObjects;
+
+  }, [selectedObjects]);
+
+  // =========================
+  // DRAG
   // =========================
 
   const dragRef = useRef({
@@ -59,7 +94,7 @@ function CanvasArea({
   });
 
   // =========================
-  // INIT ONLY ONCE
+  // INIT
   // =========================
 
   useEffect(() => {
@@ -70,7 +105,7 @@ function CanvasArea({
     if (!canvas) return;
 
     // =========================
-    // CREATE SYSTEMS
+    // SYSTEMS
     // =========================
 
     if (!canvasSystemRef.current) {
@@ -123,6 +158,9 @@ function CanvasArea({
       worldX,
       worldY
     ) => {
+
+      const layers =
+        layersRef.current;
 
       for (
         let l =
@@ -337,7 +375,9 @@ function CanvasArea({
         );
 
       addObjectToLayer(
-        activeLayerId,
+
+        activeLayerRef.current,
+
         {
 
           id:
@@ -396,9 +436,11 @@ function CanvasArea({
         canvasSystem.camera
       );
 
-      // =========================
-      // OBJECTS
-      // =========================
+      const layers =
+        layersRef.current;
+
+      const selected =
+        selectedRef.current;
 
       layers.forEach((layer) => {
 
@@ -439,7 +481,7 @@ function CanvasArea({
             // =========================
 
             if (
-              selectedObjects.includes(
+              selected.includes(
                 obj.id
               )
             ) {
@@ -547,7 +589,7 @@ function CanvasArea({
   }, []);
 
   // =========================
-  // REDRAW ON DATA CHANGE
+  // REDRAW
   // =========================
 
   useEffect(() => {
