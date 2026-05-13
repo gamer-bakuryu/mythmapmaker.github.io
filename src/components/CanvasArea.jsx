@@ -16,6 +16,12 @@ function CanvasArea({
   setSelectedObjects,
 
   updateObject,
+
+  deleteSelected,
+
+  duplicateSelected,
+
+  moveSelected,
 }) {
 
   const canvasRef = useRef(null);
@@ -31,6 +37,10 @@ function CanvasArea({
     offsetX: 0,
 
     offsetY: 0,
+
+    lastWorldX: 0,
+
+    lastWorldY: 0,
   });
 
   const resizeRef = useRef({
@@ -76,6 +86,7 @@ function CanvasArea({
       if (
         imageCacheRef.current[src]
       ) {
+
         return imageCacheRef
           .current[src];
       }
@@ -99,7 +110,15 @@ function CanvasArea({
       worldY
     ) => {
 
-      for (const layer of layers) {
+      for (
+        let l =
+          layers.length - 1;
+        l >= 0;
+        l--
+      ) {
+
+        const layer =
+          layers[l];
 
         if (
           !layer.visible ||
@@ -119,17 +138,26 @@ function CanvasArea({
             layer.objects[i];
 
           if (
+
             worldX >= obj.x &&
+
             worldX <=
-              obj.x + obj.width &&
+              obj.x +
+                obj.width &&
+
             worldY >= obj.y &&
+
             worldY <=
-              obj.y + obj.height
+              obj.y +
+                obj.height
           ) {
 
             return {
+
               object: obj,
-              layerId: layer.id,
+
+              layerId:
+                layer.id,
             };
           }
         }
@@ -161,9 +189,16 @@ function CanvasArea({
           world.y
         );
 
+      // =========================
+      // EMPTY SPACE
+      // =========================
+
       if (!found) {
 
-        setSelectedObjects([]);
+        if (!e.shiftKey) {
+
+          setSelectedObjects([]);
+        }
 
         canvasSystem.requestRedraw();
 
@@ -175,9 +210,37 @@ function CanvasArea({
         layerId,
       } = found;
 
-      setSelectedObjects([
-        object.id,
-      ]);
+      // =========================
+      // MULTI SELECT
+      // =========================
+
+      setSelectedObjects(
+        (prev) => {
+
+          if (e.shiftKey) {
+
+            if (
+              prev.includes(
+                object.id
+              )
+            ) {
+
+              return prev.filter(
+                (id) =>
+                  id !==
+                  object.id
+              );
+            }
+
+            return [
+              ...prev,
+              object.id,
+            ];
+          }
+
+          return [object.id];
+        }
+      );
 
       // =========================
       // RESIZE HANDLE
@@ -204,7 +267,8 @@ function CanvasArea({
 
           resizing: true,
 
-          objectId: object.id,
+          objectId:
+            object.id,
 
           layerId,
         };
@@ -225,7 +289,9 @@ function CanvasArea({
 
       const dist =
         Math.hypot(
+
           world.x - rotX,
+
           world.y - rotY
         );
 
@@ -235,7 +301,8 @@ function CanvasArea({
 
           rotating: true,
 
-          objectId: object.id,
+          objectId:
+            object.id,
 
           layerId,
         };
@@ -251,7 +318,8 @@ function CanvasArea({
 
         dragging: true,
 
-        objectId: object.id,
+        objectId:
+          object.id,
 
         layerId,
 
@@ -260,6 +328,12 @@ function CanvasArea({
 
         offsetY:
           world.y - object.y,
+
+        lastWorldX:
+          world.x,
+
+        lastWorldY:
+          world.y,
       };
 
       canvasSystem.requestRedraw();
@@ -287,24 +361,23 @@ function CanvasArea({
         dragRef.current.dragging
       ) {
 
-        updateObject(
-          dragRef.current.layerId,
+        const dx =
+          world.x -
+          dragRef.current
+            .lastWorldX;
 
-          dragRef.current.objectId,
+        const dy =
+          world.y -
+          dragRef.current
+            .lastWorldY;
 
-          {
+        moveSelected(dx, dy);
 
-            x:
-              world.x -
-              dragRef.current
-                .offsetX,
+        dragRef.current.lastWorldX =
+          world.x;
 
-            y:
-              world.y -
-              dragRef.current
-                .offsetY,
-          }
-        );
+        dragRef.current.lastWorldY =
+          world.y;
 
         canvasSystem.requestRedraw();
       }
@@ -326,6 +399,8 @@ function CanvasArea({
                 .layerId
           );
 
+        if (!layer) return;
+
         const object =
           layer.objects.find(
             (o) =>
@@ -334,7 +409,10 @@ function CanvasArea({
                 .objectId
           );
 
+        if (!object) return;
+
         updateObject(
+
           resizeRef.current
             .layerId,
 
@@ -346,13 +424,15 @@ function CanvasArea({
             width:
               Math.max(
                 20,
-                world.x - object.x
+                world.x -
+                  object.x
               ),
 
             height:
               Math.max(
                 20,
-                world.y - object.y
+                world.y -
+                  object.y
               ),
           }
         );
@@ -377,6 +457,8 @@ function CanvasArea({
                 .layerId
           );
 
+        if (!layer) return;
+
         const object =
           layer.objects.find(
             (o) =>
@@ -384,6 +466,8 @@ function CanvasArea({
               rotationRef.current
                 .objectId
           );
+
+        if (!object) return;
 
         const centerX =
           object.x +
@@ -395,11 +479,14 @@ function CanvasArea({
 
         const angle =
           Math.atan2(
+
             world.y - centerY,
+
             world.x - centerX
           );
 
         updateObject(
+
           rotationRef.current
             .layerId,
 
@@ -432,6 +519,43 @@ function CanvasArea({
     };
 
     // =========================
+    // KEYBOARD
+    // =========================
+
+    const handleKeyDown = (
+      e
+    ) => {
+
+      // DELETE
+
+      if (
+        e.key === "Delete"
+      ) {
+
+        deleteSelected();
+
+        canvasSystem.requestRedraw();
+      }
+
+      // DUPLICATE
+
+      if (
+
+        e.ctrlKey &&
+
+        e.key.toLowerCase() ===
+          "d"
+      ) {
+
+        e.preventDefault();
+
+        duplicateSelected();
+
+        canvasSystem.requestRedraw();
+      }
+    };
+
+    // =========================
     // DROP
     // =========================
 
@@ -459,7 +583,8 @@ function CanvasArea({
         activeLayerId,
         {
 
-          id: crypto.randomUUID(),
+          id:
+            crypto.randomUUID(),
 
           type: "sprite",
 
@@ -486,7 +611,15 @@ function CanvasArea({
 
     const renderScene = (ctx) => {
 
-      ctx.fillStyle = "#233142";
+      ctx.clearRect(
+        0,
+        0,
+        canvas.width,
+        canvas.height
+      );
+
+      ctx.fillStyle =
+        "#233142";
 
       ctx.fillRect(
         0,
@@ -496,9 +629,13 @@ function CanvasArea({
       );
 
       gridSystem.draw(
+
         ctx,
+
         canvas.width,
+
         canvas.height,
+
         canvasSystem.camera
       );
 
@@ -526,13 +663,16 @@ function CanvasArea({
             ctx.save();
 
             ctx.translate(
+
               screen.x +
+
                 (obj.width *
                   canvasSystem
                     .camera.zoom) /
                   2,
 
               screen.y +
+
                 (obj.height *
                   canvasSystem
                     .camera.zoom) /
@@ -544,6 +684,7 @@ function CanvasArea({
             );
 
             ctx.drawImage(
+
               img,
 
               -(
@@ -583,6 +724,7 @@ function CanvasArea({
               ctx.lineWidth = 2;
 
               ctx.strokeRect(
+
                 -(
                   obj.width *
                   canvasSystem
@@ -614,14 +756,12 @@ function CanvasArea({
                 (obj.width *
                   canvasSystem
                     .camera.zoom) /
-                  2 -
-                  6,
+                  2 - 6,
 
                 (obj.height *
                   canvasSystem
                     .camera.zoom) /
-                  2 -
-                  6,
+                  2 - 6,
 
                 12,
 
@@ -633,6 +773,7 @@ function CanvasArea({
               ctx.beginPath();
 
               ctx.arc(
+
                 0,
 
                 -(
@@ -657,9 +798,17 @@ function CanvasArea({
       });
     };
 
+    // =========================
+    // START LOOP
+    // =========================
+
     canvasSystem.startRenderLoop(
       renderScene
     );
+
+    // =========================
+    // EVENTS
+    // =========================
 
     canvas.addEventListener(
       "mousedown",
@@ -676,6 +825,11 @@ function CanvasArea({
       handleMouseUp
     );
 
+    window.addEventListener(
+      "keydown",
+      handleKeyDown
+    );
+
     canvas.addEventListener(
       "dragover",
       (e) =>
@@ -686,6 +840,10 @@ function CanvasArea({
       "drop",
       handleDrop
     );
+
+    // =========================
+    // CLEANUP
+    // =========================
 
     return () => {
 
@@ -706,6 +864,11 @@ function CanvasArea({
         handleMouseUp
       );
 
+      window.removeEventListener(
+        "keydown",
+        handleKeyDown
+      );
+
       canvas.removeEventListener(
         "drop",
         handleDrop
@@ -713,12 +876,24 @@ function CanvasArea({
     };
 
   }, [
+
     layers,
+
     activeLayerId,
+
     addObjectToLayer,
+
     selectedObjects,
+
     setSelectedObjects,
+
     updateObject,
+
+    deleteSelected,
+
+    duplicateSelected,
+
+    moveSelected,
   ]);
 
   return (
