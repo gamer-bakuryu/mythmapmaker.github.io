@@ -21,11 +21,11 @@ function App() {
     useAssets();
 
   return (
-    <div className="app-container">
+    <div className="app-shell">
 
       <Toolbar />
 
-      <div className="editor-layout">
+      <div className="editor-shell">
 
         <Sidebar
           assets={assetSystem.assets}
