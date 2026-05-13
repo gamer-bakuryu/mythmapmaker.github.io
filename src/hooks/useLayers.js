@@ -1,23 +1,20 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
-const STORAGE_KEY = "mythmapmaker_layers";
+import { ObjectSystem } from "../systems/objectSystem";
 
 export function useLayers() {
 
-  const [layers, setLayers] = useState(() => {
+  // =========================
+  // LAYERS
+  // =========================
 
-    const saved =
-      localStorage.getItem(STORAGE_KEY);
-
-    if (saved) {
-      return JSON.parse(saved);
-    }
-
-    return [
+  const [layers, setLayers] =
+    useState([
       {
-        id: crypto.randomUUID(),
+        id:
+          crypto.randomUUID(),
 
-        name: "Base Layer",
+        name: "Layer 1",
 
         visible: true,
 
@@ -25,27 +22,27 @@ export function useLayers() {
 
         objects: [],
       },
-    ];
-  });
-
-  const [activeLayerId, setActiveLayerId] =
-    useState(layers[0]?.id);
-
-  const [selectedObjects, setSelectedObjects] =
-    useState([]);
+    ]);
 
   // =========================
-  // SAVE
+  // ACTIVE
   // =========================
 
-  useEffect(() => {
+  const [
+    activeLayerId,
 
-    localStorage.setItem(
-      STORAGE_KEY,
-      JSON.stringify(layers)
-    );
+    setActiveLayerId,
+  ] = useState(layers[0].id);
 
-  }, [layers]);
+  // =========================
+  // SELECTION
+  // =========================
+
+  const [
+    selectedObjects,
+
+    setSelectedObjects,
+  ] = useState([]);
 
   // =========================
   // ADD LAYER
@@ -55,9 +52,13 @@ export function useLayers() {
 
     const newLayer = {
 
-      id: crypto.randomUUID(),
+      id:
+        crypto.randomUUID(),
 
-      name: `Layer ${layers.length + 1}`,
+      name:
+        `Layer ${
+          layers.length + 1
+        }`,
 
       visible: true,
 
@@ -66,31 +67,41 @@ export function useLayers() {
       objects: [],
     };
 
-    setLayers((prev) => [
+    setLayers([
+      ...layers,
       newLayer,
-      ...prev,
     ]);
 
-    setActiveLayerId(newLayer.id);
+    setActiveLayerId(
+      newLayer.id
+    );
   };
 
   // =========================
   // REMOVE
   // =========================
 
-  const removeLayer = (id) => {
+  const removeLayer = (
+    layerId
+  ) => {
 
-    if (layers.length <= 1) return;
+    if (layers.length <= 1)
+      return;
 
-    const updated =
+    const filtered =
       layers.filter(
-        (layer) => layer.id !== id
+        (l) => l.id !== layerId
       );
 
-    setLayers(updated);
+    setLayers(filtered);
 
-    if (activeLayerId === id) {
-      setActiveLayerId(updated[0].id);
+    if (
+      activeLayerId === layerId
+    ) {
+
+      setActiveLayerId(
+        filtered[0].id
+      );
     }
   };
 
@@ -99,19 +110,25 @@ export function useLayers() {
   // =========================
 
   const renameLayer = (
-    id,
-    newName
+    layerId,
+    name
   ) => {
 
-    setLayers((prev) =>
-      prev.map((layer) =>
-        layer.id === id
-          ? {
-              ...layer,
-              name: newName,
-            }
-          : layer
-      )
+    setLayers(
+      layers.map((layer) => {
+
+        if (
+          layer.id === layerId
+        ) {
+
+          return {
+            ...layer,
+            name,
+          };
+        }
+
+        return layer;
+      })
     );
   };
 
@@ -119,18 +136,28 @@ export function useLayers() {
   // VISIBILITY
   // =========================
 
-  const toggleVisibility = (id) => {
+  const toggleVisibility = (
+    layerId
+  ) => {
 
-    setLayers((prev) =>
-      prev.map((layer) =>
-        layer.id === id
-          ? {
-              ...layer,
-              visible:
-                !layer.visible,
-            }
-          : layer
-      )
+    setLayers(
+      layers.map((layer) => {
+
+        if (
+          layer.id === layerId
+        ) {
+
+          return {
+
+            ...layer,
+
+            visible:
+              !layer.visible,
+          };
+        }
+
+        return layer;
+      })
     );
   };
 
@@ -138,51 +165,29 @@ export function useLayers() {
   // LOCK
   // =========================
 
-  const toggleLock = (id) => {
-
-    setLayers((prev) =>
-      prev.map((layer) =>
-        layer.id === id
-          ? {
-              ...layer,
-              locked:
-                !layer.locked,
-            }
-          : layer
-      )
-    );
-  };
-
-  // =========================
-  // MOVE
-  // =========================
-
-  const moveLayer = (
-    index,
-    direction
+  const toggleLock = (
+    layerId
   ) => {
 
-    const updated = [...layers];
+    setLayers(
+      layers.map((layer) => {
 
-    const target =
-      index + direction;
+        if (
+          layer.id === layerId
+        ) {
 
-    if (
-      target < 0 ||
-      target >= layers.length
-    ) {
-      return;
-    }
+          return {
 
-    [
-      updated[index],
-      updated[target],
-    ] = [
-      updated[target],
-      updated[index],
-    ];
+            ...layer,
 
-    setLayers(updated);
+            locked:
+              !layer.locked,
+          };
+        }
+
+        return layer;
+      })
+    );
   };
 
   // =========================
@@ -194,18 +199,26 @@ export function useLayers() {
     object
   ) => {
 
-    setLayers((prev) =>
-      prev.map((layer) =>
-        layer.id === layerId
-          ? {
-              ...layer,
-              objects: [
-                ...layer.objects,
-                object,
-              ],
-            }
-          : layer
-      )
+    setLayers(
+      layers.map((layer) => {
+
+        if (
+          layer.id === layerId
+        ) {
+
+          return {
+
+            ...layer,
+
+            objects: [
+              ...layer.objects,
+              object,
+            ],
+          };
+        }
+
+        return layer;
+      })
     );
   };
 
@@ -219,50 +232,93 @@ export function useLayers() {
     updates
   ) => {
 
-    setLayers((prev) =>
-      prev.map((layer) =>
-        layer.id === layerId
-          ? {
-              ...layer,
+    setLayers(
+      layers.map((layer) => {
 
-              objects:
-                layer.objects.map(
-                  (obj) =>
-                    obj.id === objectId
-                      ? {
-                          ...obj,
-                          ...updates,
-                        }
-                      : obj
-                ),
-            }
-          : layer
-      )
+        if (
+          layer.id === layerId
+        ) {
+
+          return {
+
+            ...layer,
+
+            objects:
+              layer.objects.map(
+                (obj) => {
+
+                  if (
+                    obj.id ===
+                    objectId
+                  ) {
+
+                    return {
+                      ...obj,
+                      ...updates,
+                    };
+                  }
+
+                  return obj;
+                }
+              ),
+          };
+        }
+
+        return layer;
+      })
     );
   };
 
   // =========================
-  // DELETE OBJECT
+  // DELETE
   // =========================
 
-  const removeObject = (
-    layerId,
-    objectId
+  const deleteSelected =
+    () => {
+
+      setLayers(
+
+        ObjectSystem.deleteSelected(
+          layers,
+          selectedObjects
+        )
+      );
+
+      setSelectedObjects([]);
+    };
+
+  // =========================
+  // DUPLICATE
+  // =========================
+
+  const duplicateSelected =
+    () => {
+
+      setLayers(
+
+        ObjectSystem.duplicateSelected(
+          layers,
+          selectedObjects
+        )
+      );
+    };
+
+  // =========================
+  // MOVE MULTI
+  // =========================
+
+  const moveSelected = (
+    dx,
+    dy
   ) => {
 
-    setLayers((prev) =>
-      prev.map((layer) =>
-        layer.id === layerId
-          ? {
-              ...layer,
+    setLayers(
 
-              objects:
-                layer.objects.filter(
-                  (obj) =>
-                    obj.id !== objectId
-                ),
-            }
-          : layer
+      ObjectSystem.moveSelected(
+        layers,
+        selectedObjects,
+        dx,
+        dy
       )
     );
   };
@@ -271,13 +327,11 @@ export function useLayers() {
 
     layers,
 
+    setLayers,
+
     activeLayerId,
 
     setActiveLayerId,
-
-    selectedObjects,
-
-    setSelectedObjects,
 
     addLayer,
 
@@ -289,12 +343,18 @@ export function useLayers() {
 
     toggleLock,
 
-    moveLayer,
-
     addObjectToLayer,
 
     updateObject,
 
-    removeObject,
+    selectedObjects,
+
+    setSelectedObjects,
+
+    deleteSelected,
+
+    duplicateSelected,
+
+    moveSelected,
   };
 }
