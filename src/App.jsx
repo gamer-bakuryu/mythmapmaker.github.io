@@ -5,11 +5,15 @@ import LayersPanel from "./components/LayersPanel";
 import StatusBar from "./components/StatusBar";
 
 import { useLayers } from "./hooks/useLayers";
+import { useAssets } from "./hooks/useAssets";
 
 function App() {
 
   const layerSystem =
     useLayers();
+
+  const assetSystem =
+    useAssets();
 
   return (
     <div className="app-container">
@@ -18,7 +22,12 @@ function App() {
 
       <div className="editor-layout">
 
-        <Sidebar />
+        <Sidebar
+          assets={assetSystem.assets}
+          uploadAssets={
+            assetSystem.uploadAssets
+          }
+        />
 
         <CanvasArea
           layers={layerSystem.layers}
