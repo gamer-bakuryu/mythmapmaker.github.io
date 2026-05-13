@@ -1,76 +1,56 @@
-import {
-  useEffect,
-  useRef,
-} from "react";
-
-import { CanvasSystem }
-  from "../systems/canvasSystem";
-
-import { GridSystem }
-  from "../systems/gridSystem";
+import { useEffect, useRef } from "react";
+import { CanvasSystem } from "../systems/canvasSystem";
+import { GridSystem } from "../systems/gridSystem";
+import { ObjectSystem } from "../systems/objectSystem";
 
 function CanvasArea({
 
   layers,
-
   activeLayerId,
-
   addObjectToLayer,
-
   selectedObjects,
-
   setSelectedObjects,
+  updateObject,
+  deleteSelected,
+  duplicateSelected,
+  moveSelected,
+
 }) {
 
-  // =========================
-  // REFS
-  // =========================
-
-  const canvasRef =
-    useRef(null);
-
-  const canvasSystemRef =
-    useRef(null);
-
-  const gridSystemRef =
-    useRef(null);
-
-  const imageCacheRef =
-    useRef({});
+  const canvasRef = useRef(null);
+  const canvasSystemRef = useRef(null);
+  const gridSystemRef = useRef(null);
+  const imageCacheRef = useRef({});
 
   // =========================
-  // LOCAL SCENE
+  // STATE REFS (EVITA BUG)
   // =========================
 
-  const sceneRef =
-    useRef([]);
-
-  // =========================
-  // SYNC REACT -> LOCAL
-  // =========================
+  const layersRef = useRef(layers);
+  const selectedRef = useRef(selectedObjects);
 
   useEffect(() => {
-
-    sceneRef.current =
-      structuredClone(layers);
-
+    layersRef.current = layers;
   }, [layers]);
 
+  useEffect(() => {
+    selectedRef.current = selectedObjects;
+  }, [selectedObjects]);
+
   // =========================
-  // DRAG
+  // TRANSFORM STATE
   // =========================
 
-  const dragRef =
-    useRef({
+  const interactionRef = useRef({
+    mode: null, // move | resize | rotate
+    target: null,
+    offsetX: 0,
+    offsetY: 0,
+    startAngle: 0,
+  });
 
-      dragging: false,
-
-      object: null,
-
-      offsetX: 0,
-
-      offsetY: 0,
-    });
+  const snapToGrid = true;
+  const GRID = 50;
 
   // =========================
   // INIT
@@ -78,59 +58,34 @@ function CanvasArea({
 
   useEffect(() => {
 
-    const canvas =
-      canvasRef.current;
-
+    const canvas = canvasRef.current;
     if (!canvas) return;
 
-    // =========================
-    // SYSTEMS
-    // =========================
-
-    if (
-      !canvasSystemRef.current
-    ) {
-
-      canvasSystemRef.current =
-        new CanvasSystem(canvas);
+    if (!canvasSystemRef.current) {
+      canvasSystemRef.current = new CanvasSystem(canvas);
     }
 
-    if (
-      !gridSystemRef.current
-    ) {
-
-      gridSystemRef.current =
-        new GridSystem(50);
+    if (!gridSystemRef.current) {
+      gridSystemRef.current = new GridSystem(GRID);
     }
 
-    const canvasSystem =
-      canvasSystemRef.current;
-
-    const gridSystem =
-      gridSystemRef.current;
+    const canvasSystem = canvasSystemRef.current;
+    const gridSystem = gridSystemRef.current;
 
     // =========================
-    // IMAGE CACHE
+    // GET IMAGE
     // =========================
 
     const getImage = (src) => {
-
       if (!src) return null;
 
-      if (
-        imageCacheRef.current[src]
-      ) {
-
-        return imageCacheRef
-          .current[src];
+      if (imageCacheRef.current[src]) {
+        return imageCacheRef.current[src];
       }
 
       const img = new Image();
-
       img.src = src;
-
-      imageCacheRef.current[src] =
-        img;
+      imageCacheRef.current[src] = img;
 
       return img;
     };
@@ -139,446 +94,177 @@ function CanvasArea({
     // FIND OBJECT
     // =========================
 
-    const findObject =
-      (x, y) => {
-
-        const layers =
-          sceneRef.current;
-
-        for (
-          let l =
-            layers.length - 1;
-          l >= 0;
-          l--
-        ) {
-
-          const layer =
-            layers[l];
-
-          if (!layer.visible)
-            continue;
-
-          for (
-            let i =
-              layer.objects
-                .length - 1;
-            i >= 0;
-            i--
-          ) {
-
-            const obj =
-              layer.objects[i];
-
-            if (
-
-              x >= obj.x &&
-
-              x <=
-                obj.x +
-                  obj.width &&
-
-              y >= obj.y &&
-
-              y <=
-                obj.y +
-                  obj.height
-            ) {
-
-              return obj;
-            }
-          }
-        }
-
-        return null;
-      };
+    const findObject = (x, y) => {
+      return ObjectSystem.findTopObject(layersRef.current, x, y);
+    };
 
     // =========================
     // MOUSE DOWN
     // =========================
 
-    const handleMouseDown =
-      (e) => {
+    const handleMouseDown = (e) => {
 
-        if (e.button !== 0)
-          return;
+      if (e.button !== 0) return;
 
-        const world =
-          canvasSystem.screenToWorld(
-            e.clientX,
-            e.clientY
-          );
+      const world = canvasSystem.screenToWorld(e.clientX, e.clientY);
 
-        const obj =
-          findObject(
-            world.x,
-            world.y
-          );
+      const result = findObject(world.x, world.y);
 
-        if (!obj) {
+      if (!result) {
+        setSelectedObjects([]);
+        return;
+      }
 
-          setSelectedObjects([]);
+      const { obj } = result;
 
-          canvasSystem.requestRedraw();
+      setSelectedObjects([obj.id]);
 
-          return;
-        }
-
-        setSelectedObjects([
-          obj.id,
-        ]);
-
-        dragRef.current = {
-
-          dragging: true,
-
-          object: obj,
-
-          offsetX:
-            world.x - obj.x,
-
-          offsetY:
-            world.y - obj.y,
-        };
-
-        canvasSystem.requestRedraw();
+      interactionRef.current = {
+        mode: "move",
+        target: obj,
+        offsetX: world.x - obj.x,
+        offsetY: world.y - obj.y,
       };
+    };
 
     // =========================
-    // MOUSE MOVE
+    // MOVE
     // =========================
 
-    const handleMouseMove =
-      (e) => {
+    const handleMouseMove = (e) => {
 
-        const drag =
-          dragRef.current;
+      const state = interactionRef.current;
+      if (!state.target) return;
 
-        if (
-          !drag.dragging ||
-          !drag.object
-        ) {
-          return;
-        }
+      const world = canvasSystem.screenToWorld(e.clientX, e.clientY);
 
-        const world =
-          canvasSystem.screenToWorld(
-            e.clientX,
-            e.clientY
-          );
+      let newX = world.x - state.offsetX;
+      let newY = world.y - state.offsetY;
 
-        // =========================
-        // DIRECT MEMORY UPDATE
-        // =========================
+      if (snapToGrid) {
+        newX = Math.round(newX / GRID) * GRID;
+        newY = Math.round(newY / GRID) * GRID;
+      }
 
-        drag.object.x =
-          world.x -
-          drag.offsetX;
-
-        drag.object.y =
-          world.y -
-          drag.offsetY;
-
-        canvasSystem.requestRedraw();
-      };
+      state.target.x = newX;
+      state.target.y = newY;
+    };
 
     // =========================
     // MOUSE UP
     // =========================
 
-    const handleMouseUp =
-      () => {
+    const handleMouseUp = () => {
+      interactionRef.current.target = null;
+      interactionRef.current.mode = null;
+    };
 
-        dragRef.current
-          .dragging = false;
-      };
+    // =========================
+    // DELETE / DUPLICATE
+    // =========================
+
+    const handleKeyDown = (e) => {
+
+      if (e.key === "Delete") {
+        ObjectSystem.deleteObjects(layersRef.current, selectedObjects);
+        setSelectedObjects([]);
+      }
+
+      if (e.ctrlKey && e.key.toLowerCase() === "d") {
+        e.preventDefault();
+      }
+    };
 
     // =========================
     // DROP
     // =========================
 
-    const handleDrop =
-      (e) => {
+    const handleDrop = (e) => {
 
-        e.preventDefault();
+      e.preventDefault();
 
-        const raw =
-          e.dataTransfer.getData(
-            "application/json"
-          );
+      const raw = e.dataTransfer.getData("application/json");
+      if (!raw) return;
 
-        if (!raw) return;
+      const asset = JSON.parse(raw);
 
-        const asset =
-          JSON.parse(raw);
+      const world = canvasSystem.screenToWorld(e.clientX, e.clientY);
 
-        const world =
-          canvasSystem.screenToWorld(
-            e.clientX,
-            e.clientY
-          );
-
-        const newObject = {
-
-          id:
-            crypto.randomUUID(),
-
-          type: "sprite",
-
-          x: world.x,
-
-          y: world.y,
-
-          width: 120,
-
-          height: 120,
-
-          rotation: 0,
-
-          src: asset.src,
-        };
-
-        const localLayers =
-          sceneRef.current;
-
-        const layer =
-          localLayers.find(
-            (l) =>
-              l.id ===
-              activeLayerId
-          );
-
-        if (!layer) return;
-
-        layer.objects.push(
-          newObject
-        );
-
-        addObjectToLayer(
-          activeLayerId,
-          newObject
-        );
-
-        canvasSystem.requestRedraw();
-      };
+      addObjectToLayer(activeLayerId, {
+        id: crypto.randomUUID(),
+        type: "sprite",
+        x: world.x,
+        y: world.y,
+        width: 120,
+        height: 120,
+        rotation: 0,
+        src: asset.src,
+      });
+    };
 
     // =========================
     // RENDER
     // =========================
 
-    const renderScene =
-      (ctx) => {
+    const renderScene = (ctx) => {
 
-        ctx.clearRect(
-          0,
-          0,
-          canvas.width,
-          canvas.height
-        );
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-        // =========================
-        // BG
-        // =========================
+      ctx.fillStyle = "#233142";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-        ctx.fillStyle =
-          "#233142";
+      gridSystem.draw(ctx, canvas.width, canvas.height, canvasSystem.camera);
 
-        ctx.fillRect(
-          0,
-          0,
-          canvas.width,
-          canvas.height
-        );
+      const layers = layersRef.current;
+      const selected = selectedRef.current;
 
-        // =========================
-        // GRID
-        // =========================
+      for (const layer of layers) {
 
-        gridSystem.draw(
+        if (!layer.visible) continue;
 
-          ctx,
+        for (const obj of layer.objects) {
 
-          canvas.width,
+          const img = getImage(obj.src);
+          if (!img) continue;
 
-          canvas.height,
+          const screen = canvasSystem.worldToScreen(obj.x, obj.y);
 
-          canvasSystem.camera
-        );
+          const w = obj.width * canvasSystem.camera.zoom;
+          const h = obj.height * canvasSystem.camera.zoom;
 
-        // =========================
-        // OBJECTS
-        // =========================
+          ctx.drawImage(img, screen.x, screen.y, w, h);
 
-        const layers =
-          sceneRef.current;
-
-        for (
-          const layer of layers
-        ) {
-
-          if (!layer.visible)
-            continue;
-
-          for (
-            const obj of layer.objects
-          ) {
-
-            const img =
-              getImage(obj.src);
-
-            if (!img) continue;
-
-            const screen =
-              canvasSystem.worldToScreen(
-                obj.x,
-                obj.y
-              );
-
-            const width =
-              obj.width *
-              canvasSystem
-                .camera.zoom;
-
-            const height =
-              obj.height *
-              canvasSystem
-                .camera.zoom;
-
-            ctx.drawImage(
-
-              img,
-
-              screen.x,
-
-              screen.y,
-
-              width,
-
-              height
-            );
-
-            // =========================
-            // SELECTION
-            // =========================
-
-            if (
-              selectedObjects.includes(
-                obj.id
-              )
-            ) {
-
-              ctx.strokeStyle =
-                "#00ff88";
-
-              ctx.lineWidth = 2;
-
-              ctx.strokeRect(
-
-                screen.x,
-
-                screen.y,
-
-                width,
-
-                height
-              );
-            }
+          if (selected.includes(obj.id)) {
+            ctx.strokeStyle = "#00ff88";
+            ctx.lineWidth = 2;
+            ctx.strokeRect(screen.x, screen.y, w, h);
           }
         }
-      };
-
-    // =========================
-    // LOOP
-    // =========================
-
-    canvasSystem.startRenderLoop(
-      renderScene
-    );
-
-    // =========================
-    // EVENTS
-    // =========================
-
-    canvas.addEventListener(
-      "mousedown",
-      handleMouseDown
-    );
-
-    window.addEventListener(
-      "mousemove",
-      handleMouseMove
-    );
-
-    window.addEventListener(
-      "mouseup",
-      handleMouseUp
-    );
-
-    canvas.addEventListener(
-      "dragover",
-      (e) =>
-        e.preventDefault()
-    );
-
-    canvas.addEventListener(
-      "drop",
-      handleDrop
-    );
-
-    return () => {
-
-      canvas.removeEventListener(
-        "mousedown",
-        handleMouseDown
-      );
-
-      window.removeEventListener(
-        "mousemove",
-        handleMouseMove
-      );
-
-      window.removeEventListener(
-        "mouseup",
-        handleMouseUp
-      );
-
-      canvas.removeEventListener(
-        "drop",
-        handleDrop
-      );
+      }
     };
 
-  }, [
-    activeLayerId,
-    addObjectToLayer,
-    selectedObjects,
-    setSelectedObjects,
-  ]);
+    canvasSystem.startRenderLoop(renderScene);
 
-  // =========================
-  // REDRAW
-  // =========================
+    canvas.addEventListener("mousedown", handleMouseDown);
+    window.addEventListener("mousemove", handleMouseMove);
+    window.addEventListener("mouseup", handleMouseUp);
+    window.addEventListener("keydown", handleKeyDown);
+    canvas.addEventListener("drop", handleDrop);
+    canvas.addEventListener("dragover", e => e.preventDefault());
 
-  useEffect(() => {
+    return () => {
+      canvas.removeEventListener("mousedown", handleMouseDown);
+      window.removeEventListener("mousemove", handleMouseMove);
+      window.removeEventListener("mouseup", handleMouseUp);
+      window.removeEventListener("keydown", handleKeyDown);
+      canvas.removeEventListener("drop", handleDrop);
+    };
 
-    if (
-      canvasSystemRef.current
-    ) {
-
-      canvasSystemRef.current
-        .requestRedraw();
-    }
-
-  }, [layers]);
+  }, [layers, activeLayerId, selectedObjects]);
 
   return (
-
     <main className="canvas-area">
-
-      <canvas
-        ref={canvasRef}
-        id="map-canvas"
-      />
-
+      <canvas ref={canvasRef} id="map-canvas" />
     </main>
   );
 }
