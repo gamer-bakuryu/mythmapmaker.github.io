@@ -1,7 +1,16 @@
-import { useEffect, useRef } from "react";
+import {
 
-import { CanvasSystem } from "../systems/canvasSystem";
-import { GridSystem } from "../systems/gridSystem";
+  useEffect,
+
+  useRef,
+
+} from "react";
+
+import { CanvasSystem }
+  from "../systems/canvasSystem";
+
+import { GridSystem }
+  from "../systems/gridSystem";
 
 function CanvasArea({
 
@@ -24,45 +33,34 @@ function CanvasArea({
   moveSelected,
 }) {
 
-  const canvasRef = useRef(null);
+  const canvasRef =
+    useRef(null);
+
+  const canvasSystemRef =
+    useRef(null);
+
+  const gridSystemRef =
+    useRef(null);
+
+  const imageCacheRef =
+    useRef({});
+
+  // =========================
+  // DRAG STATE
+  // =========================
 
   const dragRef = useRef({
 
     dragging: false,
-
-    objectId: null,
-
-    layerId: null,
-
-    offsetX: 0,
-
-    offsetY: 0,
 
     lastWorldX: 0,
 
     lastWorldY: 0,
   });
 
-  const resizeRef = useRef({
-
-    resizing: false,
-
-    objectId: null,
-
-    layerId: null,
-  });
-
-  const rotationRef = useRef({
-
-    rotating: false,
-
-    objectId: null,
-
-    layerId: null,
-  });
-
-  const imageCacheRef =
-    useRef({});
+  // =========================
+  // INIT ONLY ONCE
+  // =========================
 
   useEffect(() => {
 
@@ -71,11 +69,27 @@ function CanvasArea({
 
     if (!canvas) return;
 
+    // =========================
+    // CREATE SYSTEMS
+    // =========================
+
+    if (!canvasSystemRef.current) {
+
+      canvasSystemRef.current =
+        new CanvasSystem(canvas);
+    }
+
+    if (!gridSystemRef.current) {
+
+      gridSystemRef.current =
+        new GridSystem(50);
+    }
+
     const canvasSystem =
-      new CanvasSystem(canvas);
+      canvasSystemRef.current;
 
     const gridSystem =
-      new GridSystem(50);
+      gridSystemRef.current;
 
     // =========================
     // IMAGE CACHE
@@ -152,13 +166,7 @@ function CanvasArea({
                 obj.height
           ) {
 
-            return {
-
-              object: obj,
-
-              layerId:
-                layer.id,
-            };
+            return obj;
           }
         }
       }
@@ -183,151 +191,28 @@ function CanvasArea({
           e.clientY
         );
 
-      const found =
+      const object =
         findObject(
           world.x,
           world.y
         );
 
-      // =========================
-      // EMPTY SPACE
-      // =========================
+      if (!object) {
 
-      if (!found) {
-
-        if (!e.shiftKey) {
-
-          setSelectedObjects([]);
-        }
+        setSelectedObjects([]);
 
         canvasSystem.requestRedraw();
 
         return;
       }
 
-      const {
-        object,
-        layerId,
-      } = found;
-
-      // =========================
-      // MULTI SELECT
-      // =========================
-
-      setSelectedObjects(
-        (prev) => {
-
-          if (e.shiftKey) {
-
-            if (
-              prev.includes(
-                object.id
-              )
-            ) {
-
-              return prev.filter(
-                (id) =>
-                  id !==
-                  object.id
-              );
-            }
-
-            return [
-              ...prev,
-              object.id,
-            ];
-          }
-
-          return [object.id];
-        }
-      );
-
-      // =========================
-      // RESIZE HANDLE
-      // =========================
-
-      const handleSize = 12;
-
-      const resizeX =
-        object.x +
-        object.width -
-        handleSize;
-
-      const resizeY =
-        object.y +
-        object.height -
-        handleSize;
-
-      if (
-        world.x >= resizeX &&
-        world.y >= resizeY
-      ) {
-
-        resizeRef.current = {
-
-          resizing: true,
-
-          objectId:
-            object.id,
-
-          layerId,
-        };
-
-        return;
-      }
-
-      // =========================
-      // ROTATION HANDLE
-      // =========================
-
-      const rotX =
-        object.x +
-        object.width / 2;
-
-      const rotY =
-        object.y - 30;
-
-      const dist =
-        Math.hypot(
-
-          world.x - rotX,
-
-          world.y - rotY
-        );
-
-      if (dist <= 12) {
-
-        rotationRef.current = {
-
-          rotating: true,
-
-          objectId:
-            object.id,
-
-          layerId,
-        };
-
-        return;
-      }
-
-      // =========================
-      // DRAG
-      // =========================
+      setSelectedObjects([
+        object.id,
+      ]);
 
       dragRef.current = {
 
         dragging: true,
-
-        objectId:
-          object.id,
-
-        layerId,
-
-        offsetX:
-          world.x - object.x,
-
-        offsetY:
-          world.y - object.y,
 
         lastWorldX:
           world.x,
@@ -347,159 +232,37 @@ function CanvasArea({
       e
     ) => {
 
+      if (
+        !dragRef.current.dragging
+      ) {
+        return;
+      }
+
       const world =
         canvasSystem.screenToWorld(
           e.clientX,
           e.clientY
         );
 
-      // =========================
-      // DRAGGING
-      // =========================
+      const dx =
+        world.x -
+        dragRef.current
+          .lastWorldX;
 
-      if (
-        dragRef.current.dragging
-      ) {
+      const dy =
+        world.y -
+        dragRef.current
+          .lastWorldY;
 
-        const dx =
-          world.x -
-          dragRef.current
-            .lastWorldX;
+      moveSelected(dx, dy);
 
-        const dy =
-          world.y -
-          dragRef.current
-            .lastWorldY;
+      dragRef.current.lastWorldX =
+        world.x;
 
-        moveSelected(dx, dy);
+      dragRef.current.lastWorldY =
+        world.y;
 
-        dragRef.current.lastWorldX =
-          world.x;
-
-        dragRef.current.lastWorldY =
-          world.y;
-
-        canvasSystem.requestRedraw();
-      }
-
-      // =========================
-      // RESIZE
-      // =========================
-
-      if (
-        resizeRef.current
-          .resizing
-      ) {
-
-        const layer =
-          layers.find(
-            (l) =>
-              l.id ===
-              resizeRef.current
-                .layerId
-          );
-
-        if (!layer) return;
-
-        const object =
-          layer.objects.find(
-            (o) =>
-              o.id ===
-              resizeRef.current
-                .objectId
-          );
-
-        if (!object) return;
-
-        updateObject(
-
-          resizeRef.current
-            .layerId,
-
-          resizeRef.current
-            .objectId,
-
-          {
-
-            width:
-              Math.max(
-                20,
-                world.x -
-                  object.x
-              ),
-
-            height:
-              Math.max(
-                20,
-                world.y -
-                  object.y
-              ),
-          }
-        );
-
-        canvasSystem.requestRedraw();
-      }
-
-      // =========================
-      // ROTATE
-      // =========================
-
-      if (
-        rotationRef.current
-          .rotating
-      ) {
-
-        const layer =
-          layers.find(
-            (l) =>
-              l.id ===
-              rotationRef.current
-                .layerId
-          );
-
-        if (!layer) return;
-
-        const object =
-          layer.objects.find(
-            (o) =>
-              o.id ===
-              rotationRef.current
-                .objectId
-          );
-
-        if (!object) return;
-
-        const centerX =
-          object.x +
-          object.width / 2;
-
-        const centerY =
-          object.y +
-          object.height / 2;
-
-        const angle =
-          Math.atan2(
-
-            world.y - centerY,
-
-            world.x - centerX
-          );
-
-        updateObject(
-
-          rotationRef.current
-            .layerId,
-
-          rotationRef.current
-            .objectId,
-
-          {
-            rotation: angle,
-          }
-        );
-
-        canvasSystem.requestRedraw();
-      }
+      canvasSystem.requestRedraw();
     };
 
     // =========================
@@ -509,12 +272,6 @@ function CanvasArea({
     const handleMouseUp = () => {
 
       dragRef.current.dragging =
-        false;
-
-      resizeRef.current.resizing =
-        false;
-
-      rotationRef.current.rotating =
         false;
     };
 
@@ -660,44 +417,13 @@ function CanvasArea({
             const img =
               getImage(obj.src);
 
-            ctx.save();
-
-            ctx.translate(
-
-              screen.x +
-
-                (obj.width *
-                  canvasSystem
-                    .camera.zoom) /
-                  2,
-
-              screen.y +
-
-                (obj.height *
-                  canvasSystem
-                    .camera.zoom) /
-                  2
-            );
-
-            ctx.rotate(
-              obj.rotation || 0
-            );
-
             ctx.drawImage(
 
               img,
 
-              -(
-                obj.width *
-                canvasSystem
-                  .camera.zoom
-              ) / 2,
+              screen.x,
 
-              -(
-                obj.height *
-                canvasSystem
-                  .camera.zoom
-              ) / 2,
+              screen.y,
 
               obj.width *
                 canvasSystem
@@ -709,7 +435,7 @@ function CanvasArea({
             );
 
             // =========================
-            // GIZMOS
+            // SELECTION
             // =========================
 
             if (
@@ -725,17 +451,9 @@ function CanvasArea({
 
               ctx.strokeRect(
 
-                -(
-                  obj.width *
-                  canvasSystem
-                    .camera.zoom
-                ) / 2,
+                screen.x,
 
-                -(
-                  obj.height *
-                  canvasSystem
-                    .camera.zoom
-                ) / 2,
+                screen.y,
 
                 obj.width *
                   canvasSystem
@@ -745,54 +463,7 @@ function CanvasArea({
                   canvasSystem
                     .camera.zoom
               );
-
-              // RESIZE HANDLE
-
-              ctx.fillStyle =
-                "#00ff88";
-
-              ctx.fillRect(
-
-                (obj.width *
-                  canvasSystem
-                    .camera.zoom) /
-                  2 - 6,
-
-                (obj.height *
-                  canvasSystem
-                    .camera.zoom) /
-                  2 - 6,
-
-                12,
-
-                12
-              );
-
-              // ROTATION HANDLE
-
-              ctx.beginPath();
-
-              ctx.arc(
-
-                0,
-
-                -(
-                  obj.height *
-                  canvasSystem
-                    .camera.zoom
-                ) / 2 - 25,
-
-                8,
-
-                0,
-
-                Math.PI * 2
-              );
-
-              ctx.fill();
             }
-
-            ctx.restore();
           }
         );
       });
@@ -847,8 +518,6 @@ function CanvasArea({
 
     return () => {
 
-      canvasSystem.stopRenderLoop();
-
       canvas.removeEventListener(
         "mousedown",
         handleMouseDown
@@ -875,25 +544,25 @@ function CanvasArea({
       );
     };
 
+  }, []);
+
+  // =========================
+  // REDRAW ON DATA CHANGE
+  // =========================
+
+  useEffect(() => {
+
+    if (
+      canvasSystemRef.current
+    ) {
+
+      canvasSystemRef.current
+        .requestRedraw();
+    }
+
   }, [
-
     layers,
-
-    activeLayerId,
-
-    addObjectToLayer,
-
     selectedObjects,
-
-    setSelectedObjects,
-
-    updateObject,
-
-    deleteSelected,
-
-    duplicateSelected,
-
-    moveSelected,
   ]);
 
   return (
