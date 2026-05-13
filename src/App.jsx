@@ -1,73 +1,35 @@
-import "./styles/global.css";
-import "./styles/layout.css";
-import "./styles/sidebar.css";
-import "./styles/canvas.css";
+<CanvasArea
+  layers={layerSystem.layers}
 
-import Toolbar from "./components/Toolbar";
-import Sidebar from "./components/Sidebar";
-import CanvasArea from "./components/CanvasArea";
-import LayersPanel from "./components/LayersPanel";
-import StatusBar from "./components/StatusBar";
+  activeLayerId={
+    layerSystem.activeLayerId
+  }
 
-import { useLayers } from "./hooks/useLayers";
-import { useAssets } from "./hooks/useAssets";
+  addObjectToLayer={
+    layerSystem.addObjectToLayer
+  }
 
-function App() {
+  selectedObjects={
+    layerSystem.selectedObjects
+  }
 
-  const layerSystem =
-    useLayers();
+  setSelectedObjects={
+    layerSystem.setSelectedObjects
+  }
 
-  const assetSystem =
-    useAssets();
+  updateObject={
+    layerSystem.updateObject
+  }
 
-  return (
-    <div className="app-shell">
+  deleteSelected={
+    layerSystem.deleteSelected
+  }
 
-      <Toolbar />
+  duplicateSelected={
+    layerSystem.duplicateSelected
+  }
 
-      <div className="editor-shell">
-
-        <Sidebar
-          assets={assetSystem.assets}
-          uploadAssets={
-            assetSystem.uploadAssets
-          }
-        />
-
-        <CanvasArea
-          layers={layerSystem.layers}
-
-          activeLayerId={
-            layerSystem.activeLayerId
-          }
-
-          addObjectToLayer={
-            layerSystem.addObjectToLayer
-          }
-
-          selectedObjects={
-            layerSystem.selectedObjects
-          }
-
-          setSelectedObjects={
-            layerSystem.setSelectedObjects
-          }
-
-          updateObject={
-            layerSystem.updateObject
-          }
-        />
-
-        <LayersPanel
-          {...layerSystem}
-        />
-
-      </div>
-
-      <StatusBar />
-
-    </div>
-  );
-}
-
-export default App;
+  moveSelected={
+    layerSystem.moveSelected
+  }
+/>
