@@ -3,26 +3,39 @@ import {
   useRef,
 } from "react";
 
-import { CanvasSystem } from "../systems/canvasSystem";
-import { GridSystem } from "../systems/gridSystem";
+import { CanvasSystem }
+  from "../systems/canvasSystem";
+
+import { GridSystem }
+  from "../systems/gridSystem";
 
 function CanvasArea({
+
   layers,
+
   activeLayerId,
+
   addObjectToLayer,
+
   selectedObjects,
+
   setSelectedObjects,
+
   updateObject,
+
   deleteSelected,
+
   duplicateSelected,
+
   moveSelected,
 }) {
 
-  // =====================================
+  // =========================
   // REFS
-  // =====================================
+  // =========================
 
-  const canvasRef = useRef(null);
+  const canvasRef =
+    useRef(null);
 
   const canvasSystemRef =
     useRef(null);
@@ -33,18 +46,18 @@ function CanvasArea({
   const imageCacheRef =
     useRef({});
 
-  // =====================================
-  // LIVE STATE REFS
-  // =====================================
+  // =========================
+  // LIVE STATE
+  // =========================
 
   const layersRef =
     useRef(layers);
 
-  const activeLayerRef =
-    useRef(activeLayerId);
-
   const selectedRef =
     useRef(selectedObjects);
+
+  const activeLayerRef =
+    useRef(activeLayerId);
 
   useEffect(() => {
 
@@ -55,36 +68,37 @@ function CanvasArea({
 
   useEffect(() => {
 
-    activeLayerRef.current =
-      activeLayerId;
-
-  }, [activeLayerId]);
-
-  useEffect(() => {
-
     selectedRef.current =
       selectedObjects;
 
   }, [selectedObjects]);
 
-  // =====================================
-  // DRAG STATE
-  // =====================================
+  useEffect(() => {
 
-  const dragRef = useRef({
+    activeLayerRef.current =
+      activeLayerId;
 
-    dragging: false,
+  }, [activeLayerId]);
 
-    objectId: null,
+  // =========================
+  // INTERACTION STATE
+  // =========================
 
-    startWorldX: 0,
+  const interactionRef =
+    useRef({
 
-    startWorldY: 0,
-  });
+      dragging: false,
 
-  // =====================================
-  // INIT SYSTEMS
-  // =====================================
+      selectedId: null,
+
+      dragOffsetX: 0,
+
+      dragOffsetY: 0,
+    });
+
+  // =========================
+  // INIT
+  // =========================
 
   useEffect(() => {
 
@@ -93,17 +107,21 @@ function CanvasArea({
 
     if (!canvas) return;
 
-    // =====================================
+    // =========================
     // SYSTEMS
-    // =====================================
+    // =========================
 
-    if (!canvasSystemRef.current) {
+    if (
+      !canvasSystemRef.current
+    ) {
 
       canvasSystemRef.current =
         new CanvasSystem(canvas);
     }
 
-    if (!gridSystemRef.current) {
+    if (
+      !gridSystemRef.current
+    ) {
 
       gridSystemRef.current =
         new GridSystem(50);
@@ -115,11 +133,13 @@ function CanvasArea({
     const gridSystem =
       gridSystemRef.current;
 
-    // =====================================
+    // =========================
     // IMAGE CACHE
-    // =====================================
+    // =========================
 
     const getImage = (src) => {
+
+      if (!src) return null;
 
       if (
         imageCacheRef.current[src]
@@ -139,277 +159,263 @@ function CanvasArea({
       return img;
     };
 
-    // =====================================
+    // =========================
     // FIND OBJECT
-    // =====================================
+    // =========================
 
-    const findObject = (
-      worldX,
-      worldY
-    ) => {
+    const findObjectAt =
+      (worldX, worldY) => {
 
-      const currentLayers =
-        layersRef.current;
-
-      for (
-        let l =
-          currentLayers.length - 1;
-        l >= 0;
-        l--
-      ) {
-
-        const layer =
-          currentLayers[l];
-
-        if (
-          !layer.visible ||
-          layer.locked
-        ) {
-          continue;
-        }
+        const layers =
+          layersRef.current;
 
         for (
-          let i =
-            layer.objects.length - 1;
-          i >= 0;
-          i--
+          let l =
+            layers.length - 1;
+          l >= 0;
+          l--
+        ) {
+
+          const layer =
+            layers[l];
+
+          if (
+            !layer.visible ||
+            layer.locked
+          ) {
+            continue;
+          }
+
+          for (
+            let i =
+              layer.objects
+                .length - 1;
+            i >= 0;
+            i--
+          ) {
+
+            const obj =
+              layer.objects[i];
+
+            if (
+              worldX >= obj.x &&
+              worldX <=
+                obj.x +
+                  obj.width &&
+              worldY >= obj.y &&
+              worldY <=
+                obj.y +
+                  obj.height
+            ) {
+
+              return obj;
+            }
+          }
+        }
+
+        return null;
+      };
+
+    // =========================
+    // MOUSE DOWN
+    // =========================
+
+    const handleMouseDown =
+      (e) => {
+
+        if (e.button !== 0)
+          return;
+
+        const world =
+          canvasSystem.screenToWorld(
+            e.clientX,
+            e.clientY
+          );
+
+        const clickedObject =
+          findObjectAt(
+            world.x,
+            world.y
+          );
+
+        // =========================
+        // EMPTY SPACE
+        // =========================
+
+        if (!clickedObject) {
+
+          setSelectedObjects([]);
+
+          interactionRef.current
+            .dragging = false;
+
+          canvasSystem.requestRedraw();
+
+          return;
+        }
+
+        // =========================
+        // SELECT
+        // =========================
+
+        setSelectedObjects([
+          clickedObject.id,
+        ]);
+
+        // =========================
+        // DRAG START
+        // =========================
+
+        interactionRef.current = {
+
+          dragging: true,
+
+          selectedId:
+            clickedObject.id,
+
+          dragOffsetX:
+            world.x -
+            clickedObject.x,
+
+          dragOffsetY:
+            world.y -
+            clickedObject.y,
+        };
+
+        canvasSystem.requestRedraw();
+      };
+
+    // =========================
+    // MOUSE MOVE
+    // =========================
+
+    const handleMouseMove =
+      (e) => {
+
+        const interaction =
+          interactionRef.current;
+
+        if (
+          !interaction.dragging
+        ) {
+          return;
+        }
+
+        const world =
+          canvasSystem.screenToWorld(
+            e.clientX,
+            e.clientY
+          );
+
+        const layers =
+          layersRef.current;
+
+        for (
+          const layer of layers
         ) {
 
           const obj =
-            layer.objects[i];
+            layer.objects.find(
+              (o) =>
+                o.id ===
+                interaction
+                  .selectedId
+            );
 
-          if (
+          if (!obj) continue;
 
-            worldX >= obj.x &&
+          // =========================
+          // SAFE POSITION
+          // =========================
 
-            worldX <=
-              obj.x +
-                obj.width &&
+          const newX =
+            world.x -
+            interaction
+              .dragOffsetX;
 
-            worldY >= obj.y &&
+          const newY =
+            world.y -
+            interaction
+              .dragOffsetY;
 
-            worldY <=
-              obj.y +
-                obj.height
-          ) {
+          // =========================
+          // UPDATE
+          // =========================
 
-            return obj;
-          }
-        }
-      }
+          updateObject(
 
-      return null;
-    };
+            layer.id,
 
-    // =====================================
-    // MOUSE DOWN
-    // =====================================
+            obj.id,
 
-    const handleMouseDown = (
-      e
-    ) => {
+            {
 
-      if (e.button !== 0)
-        return;
+              x: newX,
 
-      const world =
-        canvasSystem.screenToWorld(
-          e.clientX,
-          e.clientY
-        );
-
-      const object =
-        findObject(
-          world.x,
-          world.y
-        );
-
-      // =====================================
-      // EMPTY SPACE
-      // =====================================
-
-      if (!object) {
-
-        setSelectedObjects([]);
-
-        dragRef.current.dragging =
-          false;
-
-        canvasSystem.requestRedraw();
-
-        return;
-      }
-
-      // =====================================
-      // SELECT
-      // =====================================
-
-      if (e.shiftKey) {
-
-        setSelectedObjects(
-          (prev) => {
-
-            if (
-              prev.includes(
-                object.id
-              )
-            ) {
-
-              return prev.filter(
-                (id) =>
-                  id !==
-                  object.id
-              );
+              y: newY,
             }
+          );
 
-            return [
-              ...prev,
-              object.id,
-            ];
-          }
-        );
+          canvasSystem.requestRedraw();
 
-      } else {
-
-        setSelectedObjects([
-          object.id,
-        ]);
-      }
-
-      // =====================================
-      // START DRAG
-      // =====================================
-
-      dragRef.current = {
-
-        dragging: true,
-
-        objectId: object.id,
-
-        startWorldX:
-          world.x,
-
-        startWorldY:
-          world.y,
+          break;
+        }
       };
-    };
 
-    // =====================================
-    // MOUSE MOVE
-    // =====================================
-
-    const handleMouseMove = (
-      e
-    ) => {
-
-      if (
-        !dragRef.current.dragging
-      ) {
-        return;
-      }
-
-      const world =
-        canvasSystem.screenToWorld(
-          e.clientX,
-          e.clientY
-        );
-
-      const dx =
-        world.x -
-        dragRef.current
-          .startWorldX;
-
-      const dy =
-        world.y -
-        dragRef.current
-          .startWorldY;
-
-      // =====================================
-      // IGNORE MICRO MOVEMENT
-      // =====================================
-
-      if (
-
-        Math.abs(dx) < 0.01 &&
-
-        Math.abs(dy) < 0.01
-      ) {
-
-        return;
-      }
-
-      moveSelected(dx, dy);
-
-      dragRef.current.startWorldX =
-        world.x;
-
-      dragRef.current.startWorldY =
-        world.y;
-
-      canvasSystem.requestRedraw();
-    };
-
-    // =====================================
+    // =========================
     // MOUSE UP
-    // =====================================
+    // =========================
 
-    const handleMouseUp = () => {
+    const handleMouseUp =
+      () => {
 
-      dragRef.current.dragging =
-        false;
-    };
+        interactionRef.current
+          .dragging = false;
+      };
 
-    // =====================================
+    // =========================
     // KEYBOARD
-    // =====================================
+    // =========================
 
-    const handleKeyDown = (
-      e
-    ) => {
+    const handleKeyDown =
+      (e) => {
 
-      // DELETE
+        // =========================
+        // DELETE
+        // =========================
 
-      if (
-        e.key === "Delete"
-      ) {
+        if (
+          e.key === "Delete"
+        ) {
 
-        deleteSelected();
+          deleteSelected();
 
-        canvasSystem.requestRedraw();
-      }
+          canvasSystem.requestRedraw();
+        }
 
-      // DUPLICATE
+        // =========================
+        // DUPLICATE
+        // =========================
 
-      if (
+        if (
 
-        e.ctrlKey &&
+          e.ctrlKey &&
 
-        e.key.toLowerCase() ===
-          "d"
-      ) {
+          e.key.toLowerCase() ===
+            "d"
+        ) {
 
-        e.preventDefault();
+          e.preventDefault();
 
-        duplicateSelected();
+          duplicateSelected();
 
-        canvasSystem.requestRedraw();
-      }
-    };
+          canvasSystem.requestRedraw();
+        }
+      };
 
-    // =====================================
-    // DRAG OVER
-    // =====================================
-
-    const handleDragOver = (
-      e
-    ) => {
-
-      e.preventDefault();
-    };
-
-    // =====================================
-    // DROP ASSET
-    // =====================================
+    // =========================
+    // DROP
+    // =========================
 
     const handleDrop = (e) => {
 
@@ -459,166 +465,168 @@ function CanvasArea({
       canvasSystem.requestRedraw();
     };
 
-    // =====================================
+    // =========================
     // RENDER
-    // =====================================
+    // =========================
 
-    const renderScene = (ctx) => {
+    const renderScene =
+      (ctx) => {
 
-      ctx.clearRect(
-        0,
-        0,
-        canvas.width,
-        canvas.height
-      );
+        // =========================
+        // CLEAR
+        // =========================
 
-      // =====================================
-      // BACKGROUND
-      // =====================================
+        ctx.clearRect(
+          0,
+          0,
+          canvas.width,
+          canvas.height
+        );
 
-      ctx.fillStyle =
-        "#233142";
+        // =========================
+        // BACKGROUND
+        // =========================
 
-      ctx.fillRect(
-        0,
-        0,
-        canvas.width,
-        canvas.height
-      );
+        ctx.fillStyle =
+          "#233142";
 
-      // =====================================
-      // GRID
-      // =====================================
+        ctx.fillRect(
+          0,
+          0,
+          canvas.width,
+          canvas.height
+        );
 
-      gridSystem.draw(
+        // =========================
+        // GRID
+        // =========================
 
-        ctx,
+        gridSystem.draw(
 
-        canvas.width,
+          ctx,
 
-        canvas.height,
+          canvas.width,
 
-        canvasSystem.camera
-      );
+          canvas.height,
 
-      const currentLayers =
-        layersRef.current;
+          canvasSystem.camera
+        );
 
-      const selected =
-        selectedRef.current;
+        // =========================
+        // OBJECTS
+        // =========================
 
-      // =====================================
-      // DRAW OBJECTS
-      // =====================================
+        const layers =
+          layersRef.current;
 
-      currentLayers.forEach(
-        (layer) => {
+        const selected =
+          selectedRef.current;
+
+        for (
+          const layer of layers
+        ) {
 
           if (!layer.visible)
-            return;
+            continue;
 
-          layer.objects.forEach(
-            (obj) => {
+          for (
+            const obj of layer.objects
+          ) {
 
-              const screen =
-                canvasSystem.worldToScreen(
-                  obj.x,
-                  obj.y
-                );
+            // =========================
+            // IMAGE
+            // =========================
 
-              const img =
-                getImage(obj.src);
+            const img =
+              getImage(obj.src);
 
-              const width =
-                obj.width *
-                canvasSystem
-                  .camera.zoom;
+            if (!img) continue;
 
-              const height =
-                obj.height *
-                canvasSystem
-                  .camera.zoom;
+            // =========================
+            // SCREEN POS
+            // =========================
 
-              // =====================================
-              // WAIT IMAGE LOAD
-              // =====================================
-
-              if (!img.complete)
-                return;
-
-              ctx.save();
-
-              ctx.translate(
-
-                screen.x +
-                  width / 2,
-
-                screen.y +
-                  height / 2
+            const screen =
+              canvasSystem.worldToScreen(
+                obj.x,
+                obj.y
               );
 
-              ctx.rotate(
-                obj.rotation || 0
-              );
+            const width =
+              obj.width *
+              canvasSystem
+                .camera.zoom;
+
+            const height =
+              obj.height *
+              canvasSystem
+                .camera.zoom;
+
+            // =========================
+            // DRAW
+            // =========================
+
+            try {
 
               ctx.drawImage(
 
                 img,
 
-                -width / 2,
+                screen.x,
 
-                -height / 2,
+                screen.y,
 
                 width,
 
                 height
               );
 
-              // =====================================
-              // SELECTION
-              // =====================================
+            } catch {
 
-              if (
-                selected.includes(
-                  obj.id
-                )
-              ) {
-
-                ctx.strokeStyle =
-                  "#00ff88";
-
-                ctx.lineWidth = 2;
-
-                ctx.strokeRect(
-
-                  -width / 2,
-
-                  -height / 2,
-
-                  width,
-
-                  height
-                );
-              }
-
-              ctx.restore();
+              continue;
             }
-          );
-        }
-      );
-    };
 
-    // =====================================
+            // =========================
+            // SELECTION
+            // =========================
+
+            if (
+              selected.includes(
+                obj.id
+              )
+            ) {
+
+              ctx.strokeStyle =
+                "#00ff88";
+
+              ctx.lineWidth = 2;
+
+              ctx.strokeRect(
+
+                screen.x,
+
+                screen.y,
+
+                width,
+
+                height
+              );
+            }
+          }
+        }
+      };
+
+    // =========================
     // START LOOP
-    // =====================================
+    // =========================
 
     canvasSystem.startRenderLoop(
       renderScene
     );
 
-    // =====================================
+    // =========================
     // EVENTS
-    // =====================================
+    // =========================
 
     canvas.addEventListener(
       "mousedown",
@@ -642,7 +650,8 @@ function CanvasArea({
 
     canvas.addEventListener(
       "dragover",
-      handleDragOver
+      (e) =>
+        e.preventDefault()
     );
 
     canvas.addEventListener(
@@ -650,9 +659,9 @@ function CanvasArea({
       handleDrop
     );
 
-    // =====================================
+    // =========================
     // CLEANUP
-    // =====================================
+    // =========================
 
     return () => {
 
@@ -677,11 +686,6 @@ function CanvasArea({
       );
 
       canvas.removeEventListener(
-        "dragover",
-        handleDragOver
-      );
-
-      canvas.removeEventListener(
         "drop",
         handleDrop
       );
@@ -689,9 +693,9 @@ function CanvasArea({
 
   }, []);
 
-  // =====================================
-  // REDRAW ON CHANGE
-  // =====================================
+  // =========================
+  // REDRAW
+  // =========================
 
   useEffect(() => {
 
@@ -708,11 +712,8 @@ function CanvasArea({
     selectedObjects,
   ]);
 
-  // =====================================
-  // JSX
-  // =====================================
-
   return (
+
     <main className="canvas-area">
 
       <canvas
