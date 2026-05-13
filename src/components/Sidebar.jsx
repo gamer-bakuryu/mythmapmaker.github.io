@@ -1,24 +1,106 @@
-function Sidebar() {
+function Sidebar({
+
+  assets,
+
+  uploadAssets,
+}) {
+
+  // =========================
+  // FILE UPLOAD
+  // =========================
+
+  const handleUpload = async (
+    e
+  ) => {
+
+    const files =
+      Array.from(e.target.files);
+
+    await uploadAssets(files);
+  };
+
+  // =========================
+  // DRAG ASSET
+  // =========================
+
+  const handleDragStart = (
+    e,
+    asset
+  ) => {
+
+    e.dataTransfer.setData(
+      "application/json",
+      JSON.stringify(asset)
+    );
+  };
+
   return (
     <aside className="sidebar">
 
-      <h2>Ferramentas</h2>
+      <h2>MythMapMaker</h2>
 
-      <button>Novo Mapa</button>
+      {/* ========================= */}
+      {/* UPLOAD */}
+      {/* ========================= */}
 
-      <button>Upload Sprite</button>
+      <div className="sidebar-section">
 
-      <button>Terreno</button>
+        <h3>Upload</h3>
 
-      <button>Linha</button>
+        <label className="upload-button">
 
-      <button>Forma</button>
+          Upload Sprite
 
-      <button>Salvar</button>
+          <input
+            type="file"
+            multiple
+            accept=".png,.jpg,.jpeg,.webp"
+            onChange={handleUpload}
+          />
 
-      <button>Exportar</button>
+        </label>
 
-      <button>Gerar Mapa</button>
+      </div>
+
+      {/* ========================= */}
+      {/* ASSET LIBRARY */}
+      {/* ========================= */}
+
+      <div className="sidebar-section">
+
+        <h3>Assets</h3>
+
+        <div className="asset-library">
+
+          {assets.map((asset) => (
+
+            <div
+              key={asset.id}
+              className="asset-item"
+              draggable
+              onDragStart={(e) =>
+                handleDragStart(
+                  e,
+                  asset
+                )
+              }
+            >
+
+              <img
+                src={asset.src}
+                alt={asset.name}
+              />
+
+              <span>
+                {asset.name}
+              </span>
+
+            </div>
+          ))}
+
+        </div>
+
+      </div>
 
     </aside>
   );
