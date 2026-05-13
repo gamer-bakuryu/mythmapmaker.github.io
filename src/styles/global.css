@@ -1,83 +1,82 @@
 * {
   margin: 0;
+
   padding: 0;
+
   box-sizing: border-box;
 }
 
-:root {
+/* =========================
+   REMOVE QUALQUER 3D
+========================= */
 
-  /* =========================
-     CORES
-  ========================= */
+*,
+*::before,
+*::after {
 
-  --bg-main: #0f1720;
+  transform-style: flat !important;
 
-  --bg-secondary: #16202b;
+  perspective: none !important;
 
-  --sidebar-bg: #111927;
+  backface-visibility: hidden;
 
-  --panel-bg: #1a2636;
-
-  --toolbar-bg: #152233;
-
-  --canvas-bg: #233142;
-
-  --border-color: #2b394a;
-
-  --green-primary: #2d6a4f;
-
-  --green-hover: #40916c;
-
-  --blue-primary: #3a86ff;
-
-  --text-primary: #f1f1f1;
-
-  --text-secondary: #b8c1cc;
-
-  /* =========================
-     ESPAÇAMENTOS
-  ========================= */
-
-  --spacing-xs: 5px;
-
-  --spacing-sm: 10px;
-
-  --spacing-md: 15px;
-
-  --spacing-lg: 20px;
-
-  --radius-sm: 6px;
-
-  --radius-md: 10px;
-
-  /* =========================
-     FONTES
-  ========================= */
-
-  --font-main: Garamond, serif;
+  transform-origin: center center;
 }
 
-body {
-  width: 100vw;
-  height: 100vh;
+html,
+body,
+#root {
+
+  width: 100%;
+
+  height: 100%;
 
   overflow: hidden;
 
-  background: var(--bg-main);
+  background: #16202a;
 
-  color: var(--text-primary);
+  font-family: Garamond, serif;
 
-  font-family: var(--font-main);
+  color: white;
 
-  user-select: none;
+  /* =========================
+     FORÇA 2D
+  ========================= */
+
+  perspective: none !important;
+
+  transform: none !important;
+
+  rotate: 0deg !important;
 }
 
-button {
-  border: none;
+body {
+
+  position: fixed;
+
+  inset: 0;
+}
+
+/* =========================
+   ROOT APP
+========================= */
+
+#root {
+
+  display: flex;
+
+  flex-direction: column;
+}
+
+button,
+input {
 
   outline: none;
 
-  cursor: pointer;
+  border: none;
+}
 
-  transition: 0.2s;
+button {
+
+  cursor: pointer;
 }
