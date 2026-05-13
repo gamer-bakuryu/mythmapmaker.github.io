@@ -1,18 +1,13 @@
-import * as THREE from 'three'
-
-export function createGrid(size = 5000, divisions = 200) {
-  const grid = new THREE.GridHelper(
-    size,
-    divisions,
-    '#00ffff',
-    '#333333'
-  )
-
-  grid.position.y = 0
-
-  return grid
-}
+import { Grid } from '@react-three/drei'
 
 export default function GridSystem() {
-  return null
+  return (
+    <Grid
+      args={[5000, 200]}
+      sectionColor="#00ffff"
+      cellColor="#333333"
+      fadeDistance={3000}
+      fadeStrength={1}
+    />
+  )
 }
