@@ -1,3 +1,8 @@
+import "./styles/global.css";
+import "./styles/layout.css";
+import "./styles/sidebar.css";
+import "./styles/canvas.css";
+
 import Toolbar from "./components/Toolbar";
 import Sidebar from "./components/Sidebar";
 import CanvasArea from "./components/CanvasArea";
