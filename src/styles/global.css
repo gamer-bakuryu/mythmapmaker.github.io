@@ -1,82 +1,32 @@
 * {
   margin: 0;
-
   padding: 0;
-
   box-sizing: border-box;
-}
-
-/* =========================
-   REMOVE QUALQUER 3D
-========================= */
-
-*,
-*::before,
-*::after {
-
-  transform-style: flat !important;
-
-  perspective: none !important;
-
-  backface-visibility: hidden;
-
-  transform-origin: center center;
 }
 
 html,
 body,
 #root {
-
   width: 100%;
-
   height: 100%;
-
-  overflow: hidden;
-
-  background: #16202a;
-
-  font-family: Garamond, serif;
-
-  color: white;
-
-  /* =========================
-     FORÇA 2D
-  ========================= */
-
-  perspective: none !important;
-
-  transform: none !important;
-
-  rotate: 0deg !important;
 }
 
 body {
+  overflow: hidden;
 
-  position: fixed;
+  background: #101820;
 
-  inset: 0;
-}
+  color: white;
 
-/* =========================
-   ROOT APP
-========================= */
-
-#root {
-
-  display: flex;
-
-  flex-direction: column;
+  font-family: Garamond, serif;
 }
 
 button,
 input {
-
-  outline: none;
-
   border: none;
+  outline: none;
 }
 
 button {
-
   cursor: pointer;
 }
