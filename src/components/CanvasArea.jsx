@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react";
 import { CanvasSystem } from "../systems/canvasSystem";
 import { GridSystem } from "../systems/gridSystem";
 import { ObjectSystem } from "../systems/objectSystem";
+import { TransformSystem } from "../systems/transformSystem";
 
 function CanvasArea({
 
@@ -10,47 +11,31 @@ function CanvasArea({
   addObjectToLayer,
   selectedObjects,
   setSelectedObjects,
-  updateObject,
-  deleteSelected,
-  duplicateSelected,
-  moveSelected,
 
 }) {
 
   const canvasRef = useRef(null);
   const canvasSystemRef = useRef(null);
   const gridSystemRef = useRef(null);
-  const imageCacheRef = useRef({});
-
-  // =========================
-  // STATE REFS (EVITA BUG)
-  // =========================
+  const imageCache = useRef({});
 
   const layersRef = useRef(layers);
   const selectedRef = useRef(selectedObjects);
 
-  useEffect(() => {
-    layersRef.current = layers;
-  }, [layers]);
+  useEffect(() => layersRef.current = layers, [layers]);
+  useEffect(() => selectedRef.current = selectedObjects, [selectedObjects]);
 
-  useEffect(() => {
-    selectedRef.current = selectedObjects;
-  }, [selectedObjects]);
-
-  // =========================
-  // TRANSFORM STATE
-  // =========================
-
-  const interactionRef = useRef({
-    mode: null, // move | resize | rotate
+  const interaction = useRef({
+    mode: null,
     target: null,
+    handle: null,
     offsetX: 0,
     offsetY: 0,
     startAngle: 0,
   });
 
-  const snapToGrid = true;
   const GRID = 50;
+  const snap = true;
 
   // =========================
   // INIT
@@ -61,42 +46,36 @@ function CanvasArea({
     const canvas = canvasRef.current;
     if (!canvas) return;
 
-    if (!canvasSystemRef.current) {
+    if (!canvasSystemRef.current)
       canvasSystemRef.current = new CanvasSystem(canvas);
-    }
 
-    if (!gridSystemRef.current) {
+    if (!gridSystemRef.current)
       gridSystemRef.current = new GridSystem(GRID);
-    }
 
     const canvasSystem = canvasSystemRef.current;
-    const gridSystem = gridSystemRef.current;
+    const grid = gridSystemRef.current;
 
     // =========================
-    // GET IMAGE
+    // IMAGE CACHE
     // =========================
 
     const getImage = (src) => {
       if (!src) return null;
-
-      if (imageCacheRef.current[src]) {
-        return imageCacheRef.current[src];
-      }
+      if (imageCache.current[src]) return imageCache.current[src];
 
       const img = new Image();
       img.src = src;
-      imageCacheRef.current[src] = img;
+      imageCache.current[src] = img;
 
       return img;
     };
 
     // =========================
-    // FIND OBJECT
+    // FIND
     // =========================
 
-    const findObject = (x, y) => {
-      return ObjectSystem.findTopObject(layersRef.current, x, y);
-    };
+    const findObject = (x, y) =>
+      ObjectSystem.findTopObject(layersRef.current, x, y);
 
     // =========================
     // MOUSE DOWN
@@ -104,10 +83,7 @@ function CanvasArea({
 
     const handleMouseDown = (e) => {
 
-      if (e.button !== 0) return;
-
       const world = canvasSystem.screenToWorld(e.clientX, e.clientY);
-
       const result = findObject(world.x, world.y);
 
       if (!result) {
@@ -119,35 +95,86 @@ function CanvasArea({
 
       setSelectedObjects([obj.id]);
 
-      interactionRef.current = {
-        mode: "move",
+      const screen = canvasSystem.worldToScreen(obj.x, obj.y);
+
+      const handles = TransformSystem.getHandles(obj, screen, canvasSystem.camera);
+      const handle = TransformSystem.detectHandle(handles, e.clientX, e.clientY);
+
+      interaction.current = {
+        mode: handle ? "transform" : "move",
         target: obj,
+        handle,
         offsetX: world.x - obj.x,
         offsetY: world.y - obj.y,
       };
     };
 
     // =========================
-    // MOVE
+    // MOVE + TRANSFORM
     // =========================
 
     const handleMouseMove = (e) => {
 
-      const state = interactionRef.current;
-      if (!state.target) return;
+      const i = interaction.current;
+      if (!i.target) return;
 
       const world = canvasSystem.screenToWorld(e.clientX, e.clientY);
 
-      let newX = world.x - state.offsetX;
-      let newY = world.y - state.offsetY;
+      // =========================
+      // MOVE
+      // =========================
 
-      if (snapToGrid) {
-        newX = Math.round(newX / GRID) * GRID;
-        newY = Math.round(newY / GRID) * GRID;
+      if (i.mode === "move") {
+
+        let nx = world.x - i.offsetX;
+        let ny = world.y - i.offsetY;
+
+        if (snap) {
+          nx = Math.round(nx / GRID) * GRID;
+          ny = Math.round(ny / GRID) * GRID;
+        }
+
+        i.target.x = nx;
+        i.target.y = ny;
       }
 
-      state.target.x = newX;
-      state.target.y = newY;
+      // =========================
+      // RESIZE
+      // =========================
+
+      if (i.mode === "transform" && i.handle) {
+
+        const obj = i.target;
+
+        const dx = world.x - obj.x;
+        const dy = world.y - obj.y;
+
+        switch (i.handle) {
+
+          case "se":
+            obj.width = dx;
+            obj.height = dy;
+            break;
+
+          case "nw":
+            obj.width += obj.x - world.x;
+            obj.height += obj.y - world.y;
+            obj.x = world.x;
+            obj.y = world.y;
+            break;
+
+          case "e":
+            obj.width = dx;
+            break;
+
+          case "s":
+            obj.height = dy;
+            break;
+        }
+
+        if (obj.width < 20) obj.width = 20;
+        if (obj.height < 20) obj.height = 20;
+      }
     };
 
     // =========================
@@ -155,12 +182,12 @@ function CanvasArea({
     // =========================
 
     const handleMouseUp = () => {
-      interactionRef.current.target = null;
-      interactionRef.current.mode = null;
+      interaction.current.target = null;
+      interaction.current.mode = null;
     };
 
     // =========================
-    // DELETE / DUPLICATE
+    // DELETE
     // =========================
 
     const handleKeyDown = (e) => {
@@ -168,10 +195,6 @@ function CanvasArea({
       if (e.key === "Delete") {
         ObjectSystem.deleteObjects(layersRef.current, selectedObjects);
         setSelectedObjects([]);
-      }
-
-      if (e.ctrlKey && e.key.toLowerCase() === "d") {
-        e.preventDefault();
       }
     };
 
@@ -206,14 +229,14 @@ function CanvasArea({
     // RENDER
     // =========================
 
-    const renderScene = (ctx) => {
+    const render = (ctx) => {
 
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
       ctx.fillStyle = "#233142";
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-      gridSystem.draw(ctx, canvas.width, canvas.height, canvasSystem.camera);
+      grid.draw(ctx, canvas.width, canvas.height, canvasSystem.camera);
 
       const layers = layersRef.current;
       const selected = selectedRef.current;
@@ -234,16 +257,30 @@ function CanvasArea({
 
           ctx.drawImage(img, screen.x, screen.y, w, h);
 
+          // =========================
+          // BOX + HANDLES
+          // =========================
+
           if (selected.includes(obj.id)) {
+
             ctx.strokeStyle = "#00ff88";
             ctx.lineWidth = 2;
             ctx.strokeRect(screen.x, screen.y, w, h);
+
+            const handles = TransformSystem.getHandles(obj, screen, canvasSystem.camera);
+
+            for (const key in handles) {
+              const hnd = handles[key];
+
+              ctx.fillStyle = key === "rotate" ? "red" : "#ffffff";
+              ctx.fillRect(hnd.x - 4, hnd.y - 4, 8, 8);
+            }
           }
         }
       }
     };
 
-    canvasSystem.startRenderLoop(renderScene);
+    canvasSystem.startRenderLoop(render);
 
     canvas.addEventListener("mousedown", handleMouseDown);
     window.addEventListener("mousemove", handleMouseMove);
